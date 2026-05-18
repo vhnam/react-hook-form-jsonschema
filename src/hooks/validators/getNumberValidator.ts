@@ -2,7 +2,7 @@ import type { RegisterOptions } from 'react-hook-form'
 
 import { getNumberMaximum, getNumberMinimum } from './numberUtilities'
 import type { JSONSchemaType, NumberJSONSchemaType } from '../../JSONSchema'
-import { ErrorTypes } from './types'
+import { ErrorTypes } from '../../utils/errorTypes'
 
 export const getNumberValidator = (
   currentObject: JSONSchemaType,

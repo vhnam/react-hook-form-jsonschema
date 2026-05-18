@@ -27,7 +27,8 @@ import { getSelectCustomFields } from './useSelect'
 import { getHiddenCustomFields } from './useHidden'
 import { getPasswordCustomFields } from './usePassword'
 import { getTextAreaCustomFields } from './useTextArea'
-import { getCheckboxCustomFields } from './useCheckbox'
+import { getCheckboxCustomFields, isMultiSelectArray } from './useCheckbox'
+import type { ArrayJSONSchemaType } from '../JSONSchema'
 
 function getFromGeneric(
   genericInput: BasicInputReturnType
@@ -52,6 +53,10 @@ function getFromGeneric(
       break
 
     case 'array':
+      if (isMultiSelectArray(currentObject as ArrayJSONSchemaType)) {
+        inputs.push(getCheckboxCustomFields(genericInput))
+      }
+      break
 
     case 'boolean':
       inputs.push(getCheckboxCustomFields(genericInput))

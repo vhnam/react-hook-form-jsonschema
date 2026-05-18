@@ -1,7 +1,7 @@
 import type { RegisterOptions } from 'react-hook-form'
 
 import type { JSONSchemaType, NumberJSONSchemaType } from '../../JSONSchema'
-import { ErrorTypes } from './types'
+import { ErrorTypes } from '../../utils/errorTypes'
 
 // Used for exclusiveMinimum and exclusiveMaximum values
 const EPSILON = 0.0001

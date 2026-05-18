@@ -13,6 +13,8 @@ import {
   isJSONSchemaObject,
 } from './schemaAccess'
 
+const isArrayIndex = (node: string): boolean => /^\d+$/.test(node)
+
 const parsers: Record<string, (data: string) => number | boolean> = {
   integer: (data: string): number => parseInt(data, 10),
   number: (data: string): number => parseFloat(data),
@@ -42,40 +44,82 @@ export const getObjectFromForm = (
 
       splitPointer.reduce(
         (currentContext: FormReducerContext, node: string, index: number, src: string[]) => {
-          currentContext.currentSubSchema = currentContext.currentSubSchema
-            ? getSchemaProperty(currentContext.currentSubSchema, node)
-            : undefined
+          if (!isArrayIndex(node)) {
+            currentContext.currentSubSchema = currentContext.currentSubSchema
+              ? getSchemaProperty(currentContext.currentSubSchema, node)
+              : undefined
+          }
 
           if (node === 'properties' && !currentContext.insideProperties) {
             return { ...currentContext, insideProperties: true }
           }
 
-          if (index === src.length - 1 && currentContext.currentSubSchema) {
-            const schemaType = currentContext.currentSubSchema.type
+          if (index === src.length - 1) {
+            const arrayItemsSchema =
+              currentContext.currentSubSchema?.type === 'array'
+                ? (currentContext.currentSubSchema as { items?: { type?: string } })
+                    .items
+                : undefined
+            const itemType =
+              arrayItemsSchema &&
+              !Array.isArray(arrayItemsSchema) &&
+              arrayItemsSchema.type
+                ? arrayItemsSchema.type
+                : currentContext.currentSubSchema?.type
             let parsedValue: unknown = currentContext.targetData ?? {}
 
-            if (
-              typeof schemaType === 'string' &&
-              schemaType in parsers &&
+            if (Array.isArray(fieldValue)) {
+              parsedValue = fieldValue
+            } else if (
+              typeof itemType === 'string' &&
+              itemType in parsers &&
               (typeof fieldValue === 'string' ||
                 typeof fieldValue === 'number' ||
                 typeof fieldValue === 'boolean')
             ) {
-              parsedValue = parsers[schemaType](String(fieldValue))
+              parsedValue = parsers[itemType](String(fieldValue))
+            } else if (
+              !isArrayIndex(node) &&
+              typeof itemType === 'string' &&
+              itemType in parsers
+            ) {
+              parsedValue = fieldValue
+            } else if (isArrayIndex(node)) {
+              parsedValue = fieldValue
             }
 
-            Reflect.set(currentContext.currentJSON, node, parsedValue)
+            if (isArrayIndex(node)) {
+              const arrayTarget = currentContext.currentJSON as unknown[]
+
+              if (Array.isArray(arrayTarget)) {
+                arrayTarget[parseInt(node, 10)] = parsedValue
+              }
+            } else if (currentContext.currentSubSchema) {
+              Reflect.set(currentContext.currentJSON, node, parsedValue)
+            }
           } else if (
             !getSchemaNode(currentContext.currentJSON, node) &&
-            currentContext.currentSubSchema
+            currentContext.currentSubSchema &&
+            !isArrayIndex(node)
           ) {
-            Reflect.set(currentContext.currentJSON, node, {})
+            const childSchema = getSchemaProperty(
+              currentContext.currentSubSchema,
+              node
+            )
+            const initialValue =
+              childSchema?.type === 'array' || isArrayIndex(src[index + 1] ?? '')
+                ? []
+                : {}
+
+            Reflect.set(currentContext.currentJSON, node, initialValue)
           }
 
           const nextJson = getSchemaNode(currentContext.currentJSON, node)
-          currentContext.currentJSON = isJSONSchemaObject(nextJson)
+          currentContext.currentJSON = Array.isArray(nextJson)
             ? nextJson
-            : {}
+            : isJSONSchemaObject(nextJson)
+              ? nextJson
+              : {}
 
           return { ...currentContext, insideProperties: false }
         },

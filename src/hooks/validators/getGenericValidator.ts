@@ -1,10 +1,12 @@
 import type { RegisterOptions } from 'react-hook-form'
 
 import type { CustomValidators, CustomValidatorReturnValue } from './types'
-import { ErrorTypes } from './types'
+import { ErrorTypes } from '../../utils/errorTypes'
 import { getNumberValidator } from './getNumberValidator'
 import { getStringValidator } from './getStringValidator'
-import type { JSONSubSchemaInfo } from '../../JSONSchema'
+import { getArrayValidator } from './getArrayValidator'
+import type { ArrayJSONSchemaType, JSONSubSchemaInfo } from '../../JSONSchema'
+import { getSingleItemsSchema } from '../arrayUtils'
 
 type GetCustomValidatorReturnType = Record<
   string,
@@ -36,7 +38,8 @@ export const getValidator = (
   // The use of this variable prevents a strange undocumented behaviour of react-hook-form
   // that is it fails to validate if the `validate` field exists but is empty.
   const hasValidate =
-    Object.keys(customValidators).length > 0 || JSONSchema.enum
+    Object.keys(customValidators).length > 0 ||
+    (JSONSchema.enum != null && JSONSchema.enum.length > 0)
 
   const validator: RegisterOptions = {
     ...(hasValidate
@@ -82,7 +85,14 @@ export const getValidator = (
     case 'boolean':
       return validator
 
+    case 'array':
+      return getArrayValidator(
+        JSONSchema as ArrayJSONSchemaType,
+        validator,
+        getSingleItemsSchema(JSONSchema as ArrayJSONSchemaType)
+      )
+
     default:
-      return {}
+      return validator
   }
 }

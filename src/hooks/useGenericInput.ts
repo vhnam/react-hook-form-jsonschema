@@ -7,13 +7,13 @@ import { useFormContext } from '../components'
 import type { JSONSubSchemaInfo } from '../JSONSchema'
 import { useAnnotatedSchemaFromPointer } from '../JSONSchema/path-handler'
 import { getObjectFromForm } from '../JSONSchema/logic'
+import { getError } from './validators/getError'
+import { getValidator } from './validators/getGenericValidator'
 import {
-  getError,
   getNumberMaximum,
   getNumberMinimum,
   getNumberStep,
-  getValidator,
-} from './validators'
+} from './validators/numberUtilities'
 
 export const getGenericInput = (
   formContext: JSONFormContextValues,

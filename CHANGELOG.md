@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `useArray(pointer)` for dynamic list fields (primitives and object rows via `getItemPointer`).
+- Array validation: `minItems`, `maxItems`, `uniqueItems`, and per-item rules for list arrays.
+- `ErrorTypes.minItems`, `ErrorTypes.maxItems`, `ErrorTypes.uniqueItems`.
+- `getObjectFromForm` builds arrays from indexed pointers (e.g. `#/properties/tags/0`).
+
+### Changed
+
+- `type: 'array'` in `useObject` only auto-renders as checkboxes for multi-select schemas (`items.enum` or bounded numeric ranges); other arrays use `useArray` explicitly.
+- `getGenericValidator` applies array rules instead of returning an empty validator for `type: 'array'`.
+
 ## [0.3.0] - 2026-05-19
 
 ### Added

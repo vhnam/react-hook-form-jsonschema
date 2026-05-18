@@ -7,8 +7,56 @@ import type {
   JSONSchemaType,
   StringJSONSchemaType,
 } from '../../JSONSchema'
+import {
+  getMultiSelectFieldName,
+  getMultiSelectOptions,
+  isMultiSelectArray,
+  normalizeArrayValue,
+} from '../arrayUtils'
+import { getListArrayEntries } from '../../utils/listArrayFormUtils'
 import type { ErrorMessage } from './types'
-import { ErrorTypes } from './types'
+import { ErrorTypes } from '../../utils/errorTypes'
+
+const countMultiSelectChecked = (
+  formContext: JSONFormContextValues,
+  pointer: string,
+  options: string[]
+): number => {
+  const values = formContext.getValues() as Record<string, unknown>
+
+  return options.reduce((count, _, index) => {
+    const value = values[getMultiSelectFieldName(pointer, index)]
+
+    return count + (value && value !== false ? 1 : 0)
+  }, 0)
+}
+
+const getArrayConstraintError = (
+  arraySchema: ArrayJSONSchemaType,
+  length: number
+): ErrorMessage => {
+  if (
+    arraySchema.minItems != null &&
+    length < arraySchema.minItems
+  ) {
+    return {
+      message: ErrorTypes.minItems,
+      expected: arraySchema.minItems,
+    }
+  }
+
+  if (
+    arraySchema.maxItems != null &&
+    length > arraySchema.maxItems
+  ) {
+    return {
+      message: ErrorTypes.maxItems,
+      expected: arraySchema.maxItems,
+    }
+  }
+
+  return undefined
+}
 
 export const getError = (
   errors: FieldError | undefined,
@@ -20,33 +68,48 @@ export const getError = (
   maximum?: number,
   step?: number | 'any'
 ): ErrorMessage => {
-  // This is a special element to check errors against
   if (currentObject.type === 'array') {
     const arraySchema = currentObject as ArrayJSONSchemaType
-    const formValues = formContext.getValues() as Record<string, unknown>
-    const currentValues = formValues[pointer]
 
-    if (Array.isArray(currentValues)) {
-      const numberOfSelected =
-        currentValues.filter((value) => value !== false).length || 0
+    if (isMultiSelectArray(arraySchema)) {
+      const options = getMultiSelectOptions(arraySchema)
+      const selected = countMultiSelectChecked(
+        formContext,
+        pointer,
+        options
+      )
+      const constraintError = getArrayConstraintError(arraySchema, selected)
 
-      if (
-        arraySchema.minItems != null &&
-        numberOfSelected < arraySchema.minItems
-      ) {
-        return {
-          message: ErrorTypes.minLength,
-          expected: arraySchema.minItems,
-        }
+      if (constraintError) {
+        return constraintError
+      }
+    } else {
+      const formValues = formContext.getValues() as Record<string, unknown>
+      const fromIndices = getListArrayEntries(formValues, pointer)
+      const arr =
+        fromIndices.length > 0
+          ? fromIndices
+          : normalizeArrayValue(formValues[pointer])
+      const constraintError = getArrayConstraintError(arraySchema, arr.length)
+
+      if (constraintError) {
+        return constraintError
       }
 
-      if (
-        arraySchema.maxItems != null &&
-        numberOfSelected > arraySchema.maxItems
-      ) {
-        return {
-          message: ErrorTypes.maxLength,
-          expected: arraySchema.maxItems,
+      if (arraySchema.uniqueItems) {
+        const seen = new Set<string>()
+
+        for (const entry of arr) {
+          const key = JSON.stringify(entry)
+
+          if (seen.has(key)) {
+            return {
+              message: ErrorTypes.uniqueItems,
+              expected: true,
+            }
+          }
+
+          seen.add(key)
         }
       }
     }
@@ -106,6 +169,22 @@ export const getError = (
     case ErrorTypes.notInEnum:
       retError.message = ErrorTypes.notInEnum
       retError.expected = schemaWithEnum.enum
+      break
+
+    case ErrorTypes.minItems:
+      retError.message = ErrorTypes.minItems
+      retError.expected = (currentObject as ArrayJSONSchemaType).minItems
+      break
+
+    case ErrorTypes.maxItems:
+      retError.message = ErrorTypes.maxItems
+      retError.expected = (currentObject as ArrayJSONSchemaType).maxItems
+      break
+
+    case ErrorTypes.uniqueItems:
+      retError.message = ErrorTypes.uniqueItems
+      retError.expected = true
+      break
   }
 
   return retError

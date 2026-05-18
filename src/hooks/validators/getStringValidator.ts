@@ -1,7 +1,7 @@
 import type { RegisterOptions } from 'react-hook-form'
 
 import type { JSONSchemaType, StringJSONSchemaType } from '../../JSONSchema'
-import { ErrorTypes } from './types'
+import { ErrorTypes } from '../../utils/errorTypes'
 
 export const getStringValidator = (
   currentObject: JSONSchemaType,
