@@ -1,10 +1,16 @@
 # react-hook-form-jsonschema
 
-> Small project based on [react-hook-form](https://github.com/react-hook-form/react-hook-form) that exposes an API for easily creating customizable forms based on a [JSON Schema](https://json-schema.org/understanding-json-schema/index.html) with built-in validation.
+> React hooks library built on [react-hook-form](https://github.com/react-hook-form/react-hook-form) for creating customizable forms from a [JSON Schema](https://json-schema.org/understanding-json-schema/index.html) with built-in validation.
 
-`react-hook-form-jsonschema` is a React hooks library that manages all the stateful logic needed to make a functional form based on a JSON Schema. It returns a set of props that are meant to be called and their results destructured on the desired input field.
+`react-hook-form-jsonschema` manages the stateful logic needed to render a form from a JSON Schema. Each field hook returns props helpers (`getInputProps`, `getLabelProps`, and similar) that you spread onto your own markup.
 
-Try a live demo on [CodeSandbox](https://codesandbox.io/s/react-hook-form-jsonschema-basic-example-u68o7)!
+The package is written in **TypeScript**, targets **React 18**, and depends on **react-hook-form v7**.
+
+Try a live demo on [CodeSandbox](https://codesandbox.io/s/react-hook-form-jsonschema-basic-example-u68o7), or run the local example:
+
+```bash
+cd example && pnpm install && pnpm dev
+```
 
 [Supported JSON Schema keywords](#supported-json-schema-keywords)
 
@@ -34,9 +40,9 @@ Try a live demo on [CodeSandbox](https://codesandbox.io/s/react-hook-form-jsonsc
 
 ## Simple Usage
 
-Suppose you have a simple JSON Schema that stores a person's first name:
+Suppose you have a JSON Schema for a person’s first name:
 
-```js
+```ts
 const personSchema = {
   $id: 'https://example.com/person.schema.json',
   $schema: 'http://json-schema.org/draft-07/schema#',
@@ -45,89 +51,122 @@ const personSchema = {
   properties: {
     firstName: {
       type: 'string',
+      title: 'First Name',
       description: "The person's first name.",
     },
   },
 }
 ```
 
-And suppose you want to create a form field for the `firstName` field, simply use the `useInput()` hook and render the form using react:
+Wrap your form in `FormContext`, then use `useInput()` with a JSON Pointer to the field. Hooks must be called inside `FormContext`:
 
-```JSX
-function FirstNameField(props) {
-  const inputMethods = useInput('#/properties/firstName');
+```tsx
+import { FormContext, useInput } from 'react-hook-form-jsonschema'
+
+function FirstNameField() {
+  const inputMethods = useInput('#/properties/firstName')
 
   return (
-    <FormContext schema={personSchema}>
+    <>
       <label {...inputMethods.getLabelProps()}>
-        {inputMethods.name}
+        {inputMethods.getObject().title ?? inputMethods.name}
       </label>
       <input {...inputMethods.getInputProps()} />
+    </>
+  )
+}
+
+function PersonForm() {
+  return (
+    <FormContext schema={personSchema}>
+      <FirstNameField />
     </FormContext>
   )
 }
 ```
 
+See `example/src/main.tsx` for a fuller `useObject` example with UI schema overrides.
+
 ## Installation
 
 With npm:
 
-```
-npm install react-hook-form-jsonschema --save
+```bash
+npm install react-hook-form-jsonschema react-hook-form
 ```
 
-Or with yarn:
+With yarn:
 
+```bash
+yarn add react-hook-form-jsonschema react-hook-form
 ```
-yarn add react-hook-form-jsonschema
+
+With pnpm:
+
+```bash
+pnpm add react-hook-form-jsonschema react-hook-form
 ```
+
+**Peer dependencies:** `react`, `react-dom`, and `react-hook-form` (see `package.json` for supported versions).
 
 ## API
 
-This is the API documentation, `react-hook-form-jsonschema` also re-exports all the [`react-hook-form`](https://github.com/react-hook-form/react-hook-form) types and the `Controller` component. All of the other functionalities are abstracted by this library.
+`react-hook-form-jsonschema` re-exports all [`react-hook-form`](https://react-hook-form.com/) types and the `Controller` component. Field behavior is provided by this library’s hooks and `FormContext`.
+
+**Components:** `FormContext`, `useFormContext`
+
+**Hooks:** `useInput`, `useHidden`, `usePassword`, `useRadio`, `useSelect`, `useTextArea`, `useCheckbox`, `useObject`
+
+**Utilities:** `getDataFromPointer`, JSON Schema helpers from `./JSONSchema`
+
+**Types & enums:** `InputTypes`, `UITypes`, `ErrorTypes`, `FormContextProps`, `OnSubmitParameters`, `UISchemaType`, `ObjectJSONSchemaType`, and related hook return types
 
 ## Components API
 
 ### FormContext component API
 
-This component is the top-level component that creates the context with the schema and options all the hooks will need to be usable. So bear in mind that you **need** to define all the other components as children of `FormContext`.
+Top-level provider that holds the schema, resolved `$ref`s, validation options, and the underlying `react-hook-form` instance. All field hooks must be used under `FormContext` (as children of the rendered `<form>`).
+
+The library also exports `useFormContext()` to access the same context value from custom components.
 
 #### props:
 
 ##### Required:
 
-- `schema`: JSON Schema object which will be passed down by context for the inputs to use it for validation and the structure of the form itself.
+- `schema`: JSON Schema object passed to hooks for validation and structure. Internal `$ref` / `$id` references are resolved when the context is created.
 
 ##### Optional:
 
-- `customValidators`: An object where each member has to be a funtion with the following format:
-  - `function(value: string, context: SubSchemaInfo) => CustomValidatorReturnValue`
-  - `params`:
-    - `value`: Is the current value in the form input.
-    - `context`: Is an object with the following fields:
-      - `JSONSchema`: Is the sub schema of the current field
-      - `isRequired`: Whether the current field is required or not
-      - `objectName`: The name of the sub schema
-      - `invalidPointer`: A `boolean` indicating whether the referenced field was found within the schema or not. If it is false it is because of an error in the schema.
-      - `pointer`: JSON Pointer to sub schema that should be validated. The pointer is always in the form: `#/properties/some/properties/data` where `#` represents the root of the schema, and the `properties/some/properties/data` represents the tree of objects (from `some` to `data`) to get to the desired field, which in this case is `data`. Also see the definition of JSON Pointers on [RFC 6901](https://tools.ietf.org/html/rfc6901).
-  - `return value`: Must be either a `string` that identifies the error or a `true` value indicating the validation was succesfull.
-- `formProps`: An object that is passed to the underlying `<form>` element. Accepts the same attributes as when declaring a `<form>` with React, except `onSubmit`.
-- `validationMode`: String to indicate when to validate the input, default is `'onSubmit'`.
-  - `'onBlur'`: Validate when an input field is blurred.
-  - `'onChange'`: Validate when an input field value changes.
-  - `'onSubmit'`: Validate when the submit is triggered.
-- `revalidateMode`: String to indicate when inputs with errors get re-validated, default is `'onChange'`.
-  - `'onblur'`: Validate when an input field is blurred.
-  - `'onChange'`: Validate when an input field value changes.
-  - `'onSubmit'`: Validate when the submit is triggered.
-- `submitFocusError`: Boolean, when `true` focus on the first field with error after submit validates, if there is any. Defaults to `true`.
-- `onChange`: Callback called when there's a change in the form. It passes the form _data_ formatted by the provided JSON Schema.
-- `onSubmit`: If provided `react-hook-form-jsonschema` will call this function as the submit action, it passes an object with the following members:
-  - `data`: The data that was provided as inputs to the form, correctly formatted as an instance of the JSON Schema provided.
-  - `event`: A react event
-  - `methods`: Provides access to the methods of [`react-hook-form`](https://react-hook-form.com/api) `useForm`, from this you can extract, for example, the `triggerValidation` method to revalidate the form if an error occured while submitting.
-- `noNativeValidate`: Boolean, when `true` disables the default browser validation (notice that `react-hook-form-jsonschema` does NOT yet implement validation for URIs and email addresses).
-- `defaultValues`: An object that defines the form's default values.
+- `customValidators`: Object whose values are functions with the signature:
+  - `(value: string, context: JSONSubSchemaInfo) => CustomValidatorReturnValue`
+  - **Parameters:**
+    - `value`: Current value in the form input.
+    - `context`: Object with:
+      - `JSONSchema`: Sub-schema for the current field
+      - `isRequired`: Whether the field is required
+      - `objectName`: Name of the sub-schema node
+      - `invalidPointer`: `true` if the pointer was not found in the schema
+      - `pointer`: JSON Pointer to the sub-schema (e.g. `#/properties/address/properties/name`). See [RFC 6901](https://tools.ietf.org/html/rfc6901).
+  - **Return value:** An error message `string`, or `true` if validation passed.
+- `formProps`: Props forwarded to the underlying `<form>` element (same as React’s `<form>`, except `onSubmit`, which this library sets).
+- `validationMode`: When to run validation. Default: `'onSubmit'`. Same values as react-hook-form’s `mode`:
+  - `'onBlur'`
+  - `'onChange'`
+  - `'onSubmit'`
+  - `'onTouched'`
+  - `'all'`
+- `revalidateMode`: When fields with errors are re-validated. Default: `'onChange'`.
+  - `'onBlur'`
+  - `'onChange'`
+  - `'onSubmit'`
+- `submitFocusError`: When `true`, focus the first invalid field after submit. Default: `true`.
+- `onChange`: Called when form values change. Receives form **data** shaped according to the JSON Schema (via `getObjectFromForm`).
+- `onSubmit`: Submit handler. Receives:
+  - `data`: Form values formatted as a JSON Schema instance
+  - `event`: React synthetic event (if available)
+  - `methods`: `JSONFormContextValues` — full form context, including react-hook-form methods such as `trigger`, `reset`, and `setValue`
+- `noNativeValidate`: When `true`, sets `noValidate` on the `<form>` so the browser does not block submit. Default: `true`. Native validation is disabled because this library does not implement URI/email `format` validation in HTML5 attributes.
+- `defaultValues`: Initial form values (react-hook-form `defaultValues`).
 
 ## Functions API
 
@@ -135,120 +174,118 @@ This component is the top-level component that creates the context with the sche
 
 **Description**
 
-Gets a specific member of data given a pointer.
+Reads a scalar value from schema-shaped form data at the given JSON Pointer.
 
 **Parameters**
 
-- `pointer`: JSON Pointer to the desired sub schema that will be rendered.
-- `data`: An object, as the one passed as parameter to the `onSubmit` function.
+- `pointer`: JSON Pointer to the desired value.
+- `data`: Object in the shape produced by `onSubmit` / `onChange`.
 
 **Return**
 
-Returns the data indicated by the pointer inside an instance of a JSON Schema the object. Or undefined if the pointer is not found.
+The value at that pointer as a `string` (numbers and booleans are stringified), or `undefined` if the pointer does not resolve to a scalar.
 
 **Example**
 
-```JSX
-// Suppose you have a schema with the following format:
+```ts
 const schema = {
   type: 'object',
   properties: {
     address: {
       type: 'object',
       properties: {
-        name: { type: 'string' }
-      }
-    }
-  }
+        name: { type: 'string' },
+      },
+    },
+  },
 }
 
-// A valid instance of this schema is this:
 const data = {
   address: {
-    name: "Foo"
-  }
+    name: 'Foo',
+  },
 }
 
-// And suppose you have a pointer to a sub schema only:
 const pointer = '#/properties/address/properties/name'
 
-// Use this function to get the data from the instance of the schema(data) that
-// coincides with the sub schema the pointer points to.
-const result = getDataFromPointer(pointer, data) // returns "Foo"
+getDataFromPointer(pointer, data) // "Foo"
 ```
 
 ## Hooks API
 
-The following are the common fields returned in the object from every `use'SomeInputType'` hook:
+Every field hook returns a **basic input object** with these common members:
 
-- `type`: The type of the input, as defined in **`InputTypes`**:
-  - `generic`: the default type, a non specialized type, only contains the common fields
-  - `radio`: Type used for `<input type='radio' \>`
-  - `select`: Type used for `<select>`
-  - `input`: Type used for generic `<input \>`
-  - `textArea`: Type used for `<textarea>`
-  - `checkbox`: Type used for `<input type='checkbox' \>`
-- `pointer`: JSON Pointer to sub schema that should be validated. The pointer is always in the form: `#/properties/some/properties/data` where `#` represents the root of the schema, and the `properties/some/properties/data` represents the tree of objects (from `some` to `data`) to get to the desired field, which in this case is `data`. Also see the definition of JSON Pointers on [RFC 6901](https://tools.ietf.org/html/rfc6901).
-- `name`: The last object/data field name in the tree. In the case of the JSONSchema pointer `#/properties/child/properties/here` the name value will be `here`.
-- `isRequired`: indicates whether the field is required or not.
-- `validator`: is the object passed to `react-hook-form` to validate the form. See the [`react-hook-form`](https://github.com/react-hook-form/react-hook-form) for more information
-- `formContext`: If you want to access internal `react-hook-form` context use this
-- `getError()`: Returns an `ErrorMessage`, which has the following format:
-  - `{message: ErrorTypes, expected: ErrorMessageValues}`
-  - **`ErrorTypes`**, is an enum, with the following keys:
-    - `required`: the field is required to be filled. Value is `__form_error_required__`.
-    - `maxLength`: maximum length of string input was surpassed. Value is `__form_error_maxLength__`.
-    - `minLength`: minimum length of string input was not met. Value is `__form_error_minLength__`.
-    - `maxValue`: maximum value of number input was surpassed. Value is `__form_error_maxValue__`.
-    - `minValue`: minimum value of number input was not met. Value is `__form_error_minValue__`.
-    - `pattern`: the pattern or type defined in the schema was not met. Value is `__form_error_pattern__`.
-    - `notInteger`: the input was expected to be an integer but is not. Value is `__form_error_notInteger__`.
-    - `notFloat`: the input was expected to be a float but is not. Value is `__form_error_notFloat__`.
-    - `multipleOf`: the number is not a multiple of the number defined in the schema. Value is `__form_error_multipleOf__`.
-    - `notInEnum`: the input does not match any of the expected values defined in the `enum` option in the schema. Value is `__form_error_notInEnum__`.
-    - `undefinedError`: the error type could not be defined. Value is `__form_error_undefinedError__`.
-  - **`ErrorMessageValues`**, is the expected value to be met, it will be `true` for required, and the minimum value expected for `minValue` for example.
-- `getObject()`: Returns the data field in the schema that this input refers to
+- `type`: Input kind from **`InputTypes`**:
+  - `generic`: Default; only common fields
+  - `radio`: `<input type="radio">`
+  - `select`: `<select>`
+  - `input`: Generic `<input>`
+  - `textArea`: `<textarea>`
+  - `checkbox`: `<input type="checkbox">`
+- `pointer`: JSON Pointer to the sub-schema (e.g. `#/properties/child/properties/here`). See [RFC 6901](https://tools.ietf.org/html/rfc6901).
+- `name`: Last segment of the pointer (`here` in the example above).
+- `isRequired`: Whether the field is required.
+- `validator`: `RegisterOptions` passed to react-hook-form for this field.
+- `formContext`: `JSONFormContextValues` (schema, errors, and react-hook-form methods).
+- `getError()`: Returns an `ErrorMessage` or `undefined`:
+  - `{ message: ErrorTypes | string, expected: ErrorMessageValues }`
+  - **`ErrorTypes`** (exported enum):
+    - `required` — `__form_error_required__`
+    - `maxLength` — `__form_error_maxLength__`
+    - `minLength` — `__form_error_minLength__`
+    - `maxValue` — `__form_error_maxValue__`
+    - `minValue` — `__form_error_minValue__`
+    - `pattern` — `__form_error_pattern__`
+    - `notInteger` — `__form_error_notInteger__`
+    - `notFloat` — `__form_error_notFloat__`
+    - `multipleOf` — `__form_error_multipleOf__`
+    - `notInEnum` — `__form_error_notInEnum__`
+    - `undefinedError` — `__form_error_undefinedError__`
+  - Custom validators may set `message` to a plain `string`.
+  - **`ErrorMessageValues`**: Expected constraint value (`true` for required, numeric bounds for min/max, etc.).
+- `getObject()`: Sub-schema for this field (`JSONSchemaType`).
+- `getCurrentValue()`: Current react-hook-form value for this pointer.
 
-**Please notice that in all of the following examples it is assumed the components are already children of a `FormContext` component**
+**All examples below assume components are rendered as children of `FormContext`.**
 
 ### useCheckbox(pointer)
 
 **Description**
 
-Use this hook to build a single or multiple checkbox field in your form.
+Build a single or multi-option checkbox field.
 
 **Parameters:**
 
-- `pointer`: JSON Pointer to the desired sub schema that will be rendered.
+- `pointer`: JSON Pointer to the sub-schema to render.
 
 **Return:**
 
-Returns an object with the following fields, besides the common one's:
+Common fields plus:
 
-- `isSingle`: indicates whether there is just a single option inside the checkbox
-- `getItems()`: use this to get which values should be listed inside the radio input fields. This function derives the items by the defined type and properties inside the JSON Schema and returns all the required items to comply with the definition.
-- `getItemInputProps(index)`: use this with the spread operator inside an `<input>` tag and get the benefit of the validator, id field, name and an associated label with it for the item in the specified index from `getItems()`
-- `getItemLabelProps(index)`: the label props related to the input at the specified index from `getItems()`
+- `isSingle`: `true` when there is only one checkbox option.
+- `getItems()`: Option values derived from the schema.
+- `getItemInputProps(index)`: Props for the checkbox at `index` (spread on `<input>`).
+- `getItemLabelProps(index)`: Label props for that option.
 
 **Example:**
 
-```JSX
-function InputField(props) {
-  const inputMethods = useCheckbox(props.pointer)
+```tsx
+function CheckboxField({ pointer }: { pointer: string }) {
+  const inputMethods = useCheckbox(pointer)
 
   return (
-    <React.Fragment>
-      {inputMethods.getItems().map((value, index) => {
-        return (
-          <label {...inputMethods.getItemLabelProps(index)} key={`${value}${index}`}>
-            {inputMethods.isSingle ? inputMethods.getObject().title : value}
-            <input {...inputMethods.getItemInputProps(index)} />
-          </label>
-        )
-      })}
+    <>
+      {inputMethods.getItems().map((value, index) => (
+        <label
+          {...inputMethods.getItemLabelProps(index)}
+          key={`${value}${index}`}
+        >
+          {inputMethods.isSingle ? inputMethods.getObject().title : value}
+          <input {...inputMethods.getItemInputProps(index)} />
+        </label>
+      ))}
       {inputMethods.getError() && <p>This is an error!</p>}
-    </React.Fragment>
+    </>
   )
 }
 ```
@@ -257,33 +294,26 @@ function InputField(props) {
 
 **Description**
 
-Use this hook to build a hidden field in the form, the user will not be able to change it or see it, but it will be there when submitted.
+Hidden field included in submit data but not shown to the user.
 
 **Parameters:**
 
-- `pointer`: JSON Pointer to the desired sub schema that will be rendered.
+- `pointer`: JSON Pointer to the sub-schema to render.
 
 **Return:**
 
-Returns an object with the following fields, besides the common one's:
+Common fields plus:
 
-- `getLabelProps()`: use this with the spread operator inside a `<label>` tag and get the benefit of having all the important fields of the label filled in for you and the associated input (the `for` property) with it.
-- `getInputProps()`: use this with the spread operator inside an `<input>` tag and get the benefit of the validator, id field, name and an associated label with it
+- `getLabelProps()`: Label props linked to the input.
+- `getInputProps()`: Props for `<input type="hidden">` (spread on `<input>`).
 
 **Example:**
 
-```JSX
-function HiddenField(props) {
-  const inputMethods = useHidden('#/properties/Foo');
+```tsx
+function HiddenField() {
+  const inputMethods = useHidden('#/properties/foo')
 
-  return (
-    <React.Fragment>
-      <label {...inputMethods.getLabelProps()}>
-        {inputMethods.name}
-      </label>
-      <input {...inputMethods.getInputProps()} />
-    </React.Fragment>
-  )
+  return <input {...inputMethods.getInputProps()} />
 }
 ```
 
@@ -291,32 +321,32 @@ function HiddenField(props) {
 
 **Description**
 
-Use this hook to build a generic input field in your form, with validation based on the type of input the JSON Schema requires.
+Generic text/number input with validation derived from the schema `type` and constraints.
 
 **Parameters:**
 
-- `pointer`: JSON Pointer to the desired sub schema that will be rendered.
+- `pointer`: JSON Pointer to the sub-schema to render.
 
 **Return:**
 
-Returns an object with the following fields, besides the common one's:
+Common fields plus:
 
-- `getLabelProps()`: use this with the spread operator inside a `<label>` tag and get the benefit of having all the important fields of the label filled in for you and the associated input (the `for` property) with it.
-- `getInputProps()`: use this with the spread operator inside an `<input>` tag and get the benefit of the validator, id field, name and an associated label with it.
+- `getLabelProps()`
+- `getInputProps()`
 
 **Example:**
 
-```JSX
-function InputField(props) {
-  const inputMethods = useInput('#/properties/Foo');
+```tsx
+function InputField() {
+  const inputMethods = useInput('#/properties/foo')
 
   return (
-    <React.Fragment>
+    <>
       <label {...inputMethods.getLabelProps()}>
-        {inputMethods.name}
+        {inputMethods.getObject().title ?? inputMethods.name}
       </label>
       <input {...inputMethods.getInputProps()} />
-    </React.Fragment>
+    </>
   )
 }
 ```
@@ -325,168 +355,151 @@ function InputField(props) {
 
 **Description**
 
-This hook works a little differently than the others. `useObject` returns an array of which each of its elements corresponds to the return type of one of the other hooks.
+Renders all properties of an object sub-schema. Unlike other hooks, `useObject` returns an **array** — one entry per child field, each shaped like the corresponding specialized hook return type.
 
 **Parameters:**
 
-- `pointer`: JSON Pointer to the desired sub schema that will be rendered.
-- `UISchema` (Optional): This UISchema is a modified schema type, relative to the sub schema passed in the `pointer` prop, the format of the UISchema is the following:
+Pass a single options object:
 
-```js
-const UISchema = {
-  /*
-   *  This is the type that will be used to choose what type of input will be
-   *  used to build the specified field. Please note that the type of a node
-   *  that is an object will be ignored, as there would make no sense to render
-   *  an object without it's children inside a form.
-   */
-  type: UITypes,
+- `pointer`: JSON Pointer to the object sub-schema (often `"#"` for the root).
+- `UISchema` (optional): Per-field UI overrides relative to that object:
+
+```ts
+import { UITypes, type UISchemaType } from 'react-hook-form-jsonschema'
+
+const uiSchema: UISchemaType = {
+  type: UITypes.default,
   properties: {
-    // Note that the definition is recursive
-    child1NameHere: UISchema,
-    child2NameHere: UISchema,
-    // ...
-    childXNameHere: UISchema,
+    birthYear: { type: UITypes.select },
   },
 }
 ```
 
-- The **`UITypes`** is an enum with the following values:
-  - `default`: input will have a default type based on what react-hook-form-jsonschema thinks is better.
-  - `radio`: input will be of the radio type, just as returned by the `useRadio` hook
-  - `select`: input will be of the select type, just as returned by the `useSelect` hook
-  - `input`: input will be of the input type, just as returned by the `useInput` hook
-  - `hidden`: input will be of the hidden type, just as returned by the `useHidden` hook
-  - `password`: input will be of the password type, just as returned by the `usePassword` hook
-  - `textArea`: input will be of the textarea type, just as returned by the `useTextArea` hook
-  - `checkbox`: input will be of the checkbox type, just as returned by the `useCheckbox` hook
+**`UITypes`:**
+
+- `default`: Infer control from schema (`string` → input, `enum` → select, `boolean` / `array` → checkbox, etc.)
+- `radio`, `select`, `input`, `hidden`, `password`, `textArea`, `checkbox`: Force the matching hook behavior
+
+Object-typed nodes ignore `type` in the UI schema; their children are always rendered.
 
 **Return:**
 
-Returns an array, with each element being the return of a different call to a hook for each child of the object that was passed in the pointer.
+Array of hook return values (`InputReturnTypes[]`), one per property.
 
 **Example:**
 
-```JSX
+```tsx
+import {
+  FormContext,
+  useObject,
+  InputTypes,
+  UITypes,
+  type InputReturnTypes,
+  type UseRawInputReturnType,
+  type UseRadioReturnType,
+  type UseSelectReturnType,
+  type UISchemaType,
+} from 'react-hook-form-jsonschema'
+
 const personSchema = {
   title: 'Person',
   type: 'object',
   properties: {
-    firstName: {
-      type: 'string',
-      description: "The person's first name.",
-    },
-    lastName: {
-      type: 'string',
-      description: "The person's last name.",
-    },
+    firstName: { type: 'string', title: 'First Name' },
+    lastName: { type: 'string', title: 'Last Name' },
     birthYear: {
-      description: "The person's birth year.",
       type: 'integer',
       minimum: 1930,
       maximum: 2010,
+      title: 'Birth Year',
     },
   },
 }
 
-function SpecializedObject(props) {
-  switch (props.baseObject.type) {
+function SpecializedObject({ baseObject }: { baseObject: InputReturnTypes }) {
+  switch (baseObject.type) {
     case InputTypes.input: {
+      const input = baseObject as UseRawInputReturnType
       return (
-        <React.Fragment>
-          <label {...props.baseObject.getLabelProps()}>
-            {props.baseObject.name}
-          </label>
-          <input {...props.baseObject.getInputProps()} />
-        </React.Fragment>
+        <>
+          <label {...input.getLabelProps()}>{input.getObject().title}</label>
+          <input {...input.getInputProps()} />
+        </>
       )
     }
     case InputTypes.radio: {
+      const radio = baseObject as UseRadioReturnType
       return (
-        <React.Fragment>
-          <label {...props.baseObject.getLabelProps()}>
-            {props.baseObject.name}
-          </label>
-          {props.baseObject.getItems().map((value, index) => {
-            return (
-              <label
-                {...props.baseObject.getItemLabelProps(index)}
-                key={`${value}${index}`}
-              >
-                {value}
-                <input {...props.baseObject.getItemInputProps(index)} />
-              </label>
-            )
-          })}
-        </React.Fragment>
+        <>
+          <label {...radio.getLabelProps()}>{radio.getObject().title}</label>
+          {radio.getItems().map((value, index) => (
+            <label {...radio.getItemLabelProps(index)} key={`${value}${index}`}>
+              {value}
+              <input {...radio.getItemInputProps(index)} />
+            </label>
+          ))}
+        </>
       )
     }
     case InputTypes.select: {
+      const select = baseObject as UseSelectReturnType
       return (
-        <React.Fragment>
-          <label {...props.baseObject.getLabelProps()}>
-            {props.baseObject.name}
-          </label>
-          <select {...props.baseObject.getSelectProps()}>
-            {props.baseObject.getItems().map((value, index) => {
-              return (
-                <option
-                  {...props.baseObject.getItemOptionProps(index)}
-                  key={`${value}${index}`}
-                >
-                  {value}
-                </option>
-              )
-            })}
+        <>
+          <label {...select.getLabelProps()}>{select.getObject().title}</label>
+          <select {...select.getSelectProps()}>
+            {select.getItems().map((value, index) => (
+              <option
+                {...select.getItemOptionProps(index)}
+                key={`${value}${index}`}
+              >
+                {value}
+              </option>
+            ))}
           </select>
-        </React.Fragment>
+        </>
       )
     }
+    default:
+      return null
   }
-  return <React.Fragment></React.Fragment>
 }
 
-function ObjectRenderer(props) {
-  const inputMethods = useObject({ pointer: props.pointer, UISchema: props.UISchema })
+function ObjectRenderer({
+  pointer,
+  UISchema,
+}: {
+  pointer: string
+  UISchema?: UISchemaType
+}) {
+  const fields = useObject({ pointer, UISchema })
 
-  const objectForm = []
-
-  // Note that we also add error checking here and show a message in case there
-  // is one. Remember that you can also check for the type of error returned
-  // anb give a more specialized warning to the user.
-  for (const obj of inputMethods) {
-    objectForm.push(
-      <div key={`${obj.type}${obj.pointer}`}>
-        <SpecializedObject baseObject={obj} />
-        {obj.getError() && <p>This is an error!</p>}
-      </div>
-    )
-  }
-
-  return <React.Fragment>{objectForm}</React.Fragment>
+  return (
+    <>
+      {fields.map((obj) => (
+        <div key={`${obj.type}${obj.pointer}`}>
+          <SpecializedObject baseObject={obj} />
+          {obj.getError() && <p>This is an error!</p>}
+        </div>
+      ))}
+    </>
+  )
 }
 
-function RenderMyJSONSchema() {
-  // Notice that even though only one child was specified, all the children of
-  // the root object are rendered, using the choosen default for each field.
-  const UISchema = {
+function PersonForm() {
+  const uiSchema: UISchemaType = {
     type: UITypes.default,
-    properties: {
-      birthYear: {
-        type: UITypes.select,
-      },
-    },
+    properties: { birthYear: { type: UITypes.select } },
   }
 
   return (
     <FormContext schema={personSchema}>
-      <ObjectRenderer pointer="#" UISchema={UISchema} />
+      <ObjectRenderer pointer="#" UISchema={uiSchema} />
     </FormContext>
   )
 }
 ```
 
-This is the result of this example:
+Example output (unchanged from earlier demos):
 
 <img src="https://user-images.githubusercontent.com/19346539/72556402-48b35080-387d-11ea-92a0-8b5914462603.png" alt="useObject Example" width="200"/>
 
@@ -494,32 +507,27 @@ This is the result of this example:
 
 **Description**
 
-Use this hook to build a password input field in your form, with validation based on the type of input the JSON Schema requires.
+Password input with the same validation rules as `useInput` for the schema type.
 
 **Parameters:**
 
-- `pointer`: JSON Pointer to the desired sub schema that will be rendered.
+- `pointer`: JSON Pointer to the sub-schema to render.
 
 **Return:**
 
-Returns an object with the following fields, besides the common one's:
-
-- `getLabelProps()`: use this with the spread operator inside a `<label>` tag and get the benefit of having all the important fields of the label filled in for you and the associated input (the `for` property) with it.
-- `getInputProps()`: use this with the spread operator inside an `<input>` tag and get the benefit of the validator, id field, name and an associated label with it
+Common fields plus `getLabelProps()` and `getInputProps()` (`type="password"`).
 
 **Example:**
 
-```JSX
-function PasswordField(props) {
-  const inputMethods = usePassword('#/properties/Foo');
+```tsx
+function PasswordField() {
+  const inputMethods = usePassword('#/properties/foo')
 
   return (
-    <React.Fragment>
-      <label {...inputMethods.getLabelProps()}>
-        {inputMethods.name}
-      </label>
+    <>
+      <label {...inputMethods.getLabelProps()}>{inputMethods.name}</label>
       <input {...inputMethods.getInputProps()} />
-    </React.Fragment>
+    </>
   )
 }
 ```
@@ -528,38 +536,41 @@ function PasswordField(props) {
 
 **Description**
 
-Use this hook to build a radio field in your form.
+Radio button group for `enum` string fields.
 
 **Parameters:**
 
-- `pointer`: JSON Pointer to the desired sub schema that will be rendered.
+- `pointer`: JSON Pointer to the sub-schema to render.
 
 **Return:**
 
-Returns an object with the following fields, besides the common one's:
+Common fields plus:
 
-- `getItems()`: use this to get which values should be listed inside the radio input fields. This function derives the items by the defined type and properties inside the JSON Schema and returns all the required items to comply with the definition.
-- `getItemInputProps(index)`: use this with the spread operator inside an `<input>` tag and get the benefit of the validator, id field, name and an associated label with it for the item in the specified index from `getItems()`
-- `getItemLabelProps(index)`: the label props related to the input at the specified index from `getItems()`
+- `getLabelProps()` (group label)
+- `getItems()`
+- `getItemInputProps(index)`
+- `getItemLabelProps(index)`
 
 **Example:**
 
-```JSX
-function InputField(props) {
-  const inputMethods = useRadio('#/properties/Foo');
+```tsx
+function RadioField() {
+  const inputMethods = useRadio('#/properties/foo')
 
   return (
-    <React.Fragment>
-      {inputMethods.getItems().map((value, index) => {
-        return (
-          <label {...inputMethods.getItemLabelProps(index)} key={`${value}${index}`}>
-            {value}
-            <input {...inputMethods.getItemInputProps(index)} />
-          </label>
-        )
-      })}
+    <>
+      <label {...inputMethods.getLabelProps()}>{inputMethods.name}</label>
+      {inputMethods.getItems().map((value, index) => (
+        <label
+          {...inputMethods.getItemLabelProps(index)}
+          key={`${value}${index}`}
+        >
+          {value}
+          <input {...inputMethods.getItemInputProps(index)} />
+        </label>
+      ))}
       {inputMethods.getError() && <p>This is an error!</p>}
-    </React.Fragment>
+    </>
   )
 }
 ```
@@ -568,44 +579,42 @@ function InputField(props) {
 
 **Description**
 
-Use this hook to build a select field in your form.
+`<select>` for `enum` fields.
 
 **Parameters:**
 
-- `pointer`: JSON Pointer to the desired sub schema that will be rendered.
+- `pointer`: JSON Pointer to the sub-schema to render.
 
 **Return:**
 
-Returns an object with the following fields, besides the common one's:
+Common fields plus:
 
-- `getLabelProps()`: use this with the spread operator inside a `<label>` tag and get the benefit of having all the important fields of the label filled in for you and the associated select (the `for` property) with it.
-- `getItems()`: use this to get all the values that are possible to be in the radio buttons
-- `getItemOptionProps(index)`: use this with the spread operator inside an `<option>` tag and get the benefit of the validator, id field and name for the item in the specified index from `getItems()`
-- `getSelectProps()`: use this with the spread operator inside a `<select>` tag to get validation and register it with the react-hook-form-jsonschema.
+- `getLabelProps()`
+- `getItems()`
+- `getItemOptionProps(index)`
+- `getSelectProps()`
 
 **Example:**
 
-```JSX
-function InputField(props) {
-  const inputMethods = useSelect('#/properties/Foo');
+```tsx
+function SelectField() {
+  const inputMethods = useSelect('#/properties/foo')
 
   return (
-    <React.Fragment>
+    <>
       <label {...inputMethods.getLabelProps()}>{inputMethods.name}</label>
       <select {...inputMethods.getSelectProps()}>
-        {inputMethods.getItems().map((value, index) => {
-          return (
-            <option
-              {...inputMethods.getItemOptionProps(index)}
-              key={`${value}${index}`}
-            >
-              {value}
-            </option>
-          )
-        })}
+        {inputMethods.getItems().map((value, index) => (
+          <option
+            {...inputMethods.getItemOptionProps(index)}
+            key={`${value}${index}`}
+          >
+            {value}
+          </option>
+        ))}
       </select>
       {inputMethods.getError() && <p>This is an error!</p>}
-    </React.Fragment>
+    </>
   )
 }
 ```
@@ -614,39 +623,34 @@ function InputField(props) {
 
 **Description**
 
-Use this hook to build a textarea field in the form.
+Multi-line text input.
 
 **Parameters:**
 
-- `pointer`: JSON Pointer to the desired sub schema that will be rendered.
+- `pointer`: JSON Pointer to the sub-schema to render.
 
 **Return:**
 
-Returns an object with the following fields, besides the common one's:
-
-- `getLabelProps()`: use this with the spread operator inside a `<label>` tag and get the benefit of having all the important fields of the label filled in for you and the associated input (the `for` property) with it.
-- `getTextAreaProps()`: use this with the spread operator inside an `<textarea>` tag and get the benefit of the validator, id field, name and an associated label with it
+Common fields plus `getLabelProps()` and `getTextAreaProps()`.
 
 **Example:**
 
-```JSX
-function HiddenField(props) {
-  const inputMethods = useTextArea('#/properties/Foo');
+```tsx
+function TextAreaField() {
+  const inputMethods = useTextArea('#/properties/foo')
 
   return (
-    <React.Fragment>
-      <label {...inputMethods.getLabelProps()}>
-        {inputMethods.name}
-      </label>
+    <>
+      <label {...inputMethods.getLabelProps()}>{inputMethods.name}</label>
       <textarea {...inputMethods.getTextAreaProps()} />
-    </React.Fragment>
+    </>
   )
 }
 ```
 
 ## Supported JSON Schema keywords
 
-- `multipleOf`
+- `multipleOf` (integer; float `multipleOf` validation is incomplete)
 - `maximum`
 - `exclusiveMaximum`
 - `minimum`
@@ -655,32 +659,33 @@ function HiddenField(props) {
 - `minLength`
 - `pattern`
 - `items` (does not support an array of schemas)
-- `maxItems` (for this one and `minItems` they are missing specific error messages)
+- `maxItems` (limited error messaging with `minItems`)
 - `minItems`
 - `required`
 - `enum`
-- `type` (does not support array of types)
+- `type` (does not support an array of types)
 - `properties`
 - `$id`
-- `$ref`
+- `$ref` (resolved within the provided schema document via `$id` map)
 
-Does not support fetching a JSON Schema from an URI (as per the draft this is optional).
+Does **not** fetch a JSON Schema from a remote URI (optional in the spec). Absolute `$ref` URIs are only supported when the target schema is present in the same document’s `$id` index.
 
 ## TODO/Next Steps
 
-- [ ] Improve array type support(and it's validation).
-- [ ] Implement `dependencies` keyword for dynamic formularies.
-- [ ] Implement `allOf`, `anyOf`, `oneOf` and `not` for more liberty in creating form schemas.
-- [ ] Implement built-in validation of `format` keyword for all possible formats.
-- [ ] Maybe? Implement new input types for each, or similar, formats, like an `useDate` for format `date-time`
-- [ ] Implement `default` values.
+- [ ] Improve array type support (and its validation).
+- [ ] Implement `dependencies` keyword for dynamic forms.
+- [ ] Implement `allOf`, `anyOf`, `oneOf`, and `not` for richer schemas.
+- [ ] Implement built-in validation for all `format` keyword values.
+- [ ] Maybe? Dedicated hooks per format (e.g. `useDate` for `date-time`).
+- [ ] Apply schema `default` values to the form automatically.
 - [ ] Implement `const` keyword.
-- [ ] Warn user that there is an error in the schema if any of the keywords fails to validate against the expected type and format.
+- [ ] Warn when schema keywords are invalid for their declared types.
 
 ## Useful resources
 
-- [JSON Schema Draft 6 Core](https://tools.ietf.org/html/draft-wright-json-schema-01): Draft of the core JSONSchema, essential for implementing any new feature in the library
-- [JSON Schema Draft 6 Validation](https://tools.ietf.org/html/draft-wright-json-schema-validation-01): Describes the schema keywords with how they shoul be handled, what they do, and how to validate against them, essential for implementing any new keyword
-- [RFC 6901](https://tools.ietf.org/html/rfc6901): RFC of JSON Pointers.
-- [Understanding JSON Schema](https://json-schema.org/understanding-json-schema/index.html) (Beware this is for Draft 7, but it is still a pretty good reference)
-- [JSON Schema Website](https://json-schema.org/)
+- [JSON Schema Draft 2020-12 Core](https://json-schema.org/draft/2020-12/draft-bhutton-json-schema-01.html): Core vocabulary (meta-data, references, anchors).
+- [JSON Schema Draft 2020-12 Validation](https://json-schema.org/draft/2020-12/draft-bhutton-json-schema-validation-01.html): Validation keywords and semantics.
+- [RFC 6901](https://tools.ietf.org/html/rfc6901): JSON Pointers.
+- [Understanding JSON Schema](https://json-schema.org/understanding-json-schema/about) (Draft 7, 2019-09 and 2020-12 oriented; still a practical guide).
+- [JSON Schema website](https://json-schema.org/)
+- [react-hook-form documentation](https://react-hook-form.com/docs)
