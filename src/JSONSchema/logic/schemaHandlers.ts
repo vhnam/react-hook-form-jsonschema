@@ -1,5 +1,5 @@
-import { JSONSchemaType, JSONSubSchemaInfo } from '../types'
-import { JSONFormContextValues } from '../../components'
+import type { JSONSchemaType, JSONSubSchemaInfo } from '../types'
+import type { JSONFormContextValues } from '../../components'
 import {
   concatFormPointer,
   JSONSchemaRootPointer,
@@ -20,6 +20,7 @@ export const getObjectFromForm = (
     .sort()
     .reduce((objectFromData: JSONSchemaType, key: string) => {
       const splitPointer = getSplitPointer(key)
+
       if (!splitPointer || !data[key]) {
         return objectFromData
       }
@@ -39,7 +40,7 @@ export const getObjectFromForm = (
               currentContext.currentSubSchema.type &&
               parsers[currentContext.currentSubSchema.type]
                 ? parsers[currentContext.currentSubSchema.type](data[key])
-                : currentContext.targetData ?? {}
+                : (currentContext.targetData ?? {})
           } else if (
             !currentContext.currentJSON[node] &&
             currentContext.currentSubSchema
@@ -58,6 +59,7 @@ export const getObjectFromForm = (
           targetData: data[key],
         }
       )
+
       return objectFromData
     }, {})
 }
@@ -95,7 +97,9 @@ export const getAnnotatedSchemaFromPointer = (
           JSONSchema: undefined,
           invalidPointer: true,
         }
-      } else if (node === 'properties' && !currentInfo.insideProperties) {
+      }
+
+      if (node === 'properties' && !currentInfo.insideProperties) {
         const fatherIsRequired = currentInfo.isRequired
 
         return {
@@ -108,7 +112,7 @@ export const getAnnotatedSchemaFromPointer = (
         }
       }
 
-      const fatherExists = currentData ? true : false
+      const fatherExists = !!currentData
       const newCurrentData = currentData ? currentData[node] : currentData
       const isRequired = currentInfo.currentRequiredField.indexOf(node) > -1
 

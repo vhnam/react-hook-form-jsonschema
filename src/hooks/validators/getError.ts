@@ -1,13 +1,15 @@
-import { FieldError, FormContextValues } from 'react-hook-form'
+import type { FieldError } from 'react-hook-form'
 
-import { ErrorTypes, ErrorMessage } from './types'
-import { JSONSchemaType } from '../../JSONSchema'
+import type { JSONFormContextValues } from '../../components'
+import type { ErrorMessage } from './types'
+import { ErrorTypes } from './types'
+import type { JSONSchemaType } from '../../JSONSchema'
 
 export const getError = (
   errors: FieldError | undefined,
   currentObject: JSONSchemaType,
   isRequired: boolean,
-  formContext: FormContextValues,
+  formContext: JSONFormContextValues,
   pointer: string,
   minimum?: number,
   maximum?: number,
@@ -22,16 +24,16 @@ export const getError = (
 
     if (currentValues) {
       const numberOfSelected =
-        currentValues.filter(x => x !== false).length || 0
+        currentValues.filter((x) => x !== false).length || 0
+
       if (currentObject.minItems && numberOfSelected < currentObject.minItems) {
         return {
           message: ErrorTypes.minLength,
           expected: currentObject.minItems,
         }
-      } else if (
-        currentObject.maxItems &&
-        numberOfSelected > currentObject.maxItems
-      ) {
+      }
+
+      if (currentObject.maxItems && numberOfSelected > currentObject.maxItems) {
         return {
           message: ErrorTypes.maxLength,
           expected: currentObject.maxItems,
@@ -46,7 +48,7 @@ export const getError = (
 
   const retError: ErrorMessage = {
     message:
-      typeof errors.message == 'string'
+      typeof errors.message === 'string'
         ? errors.message
         : ErrorTypes.undefinedError,
     expected: undefined,
@@ -57,33 +59,41 @@ export const getError = (
       retError.message = ErrorTypes.required
       retError.expected = isRequired
       break
+
     case ErrorTypes.maxLength:
       retError.message = ErrorTypes.maxLength
       retError.expected = currentObject.maxLength
       break
+
     case ErrorTypes.minLength:
       retError.message = ErrorTypes.minLength
       retError.expected = currentObject.minLength
       break
+
     case ErrorTypes.maxValue:
       retError.message = ErrorTypes.maxValue
       retError.expected = maximum
       break
+
     case ErrorTypes.minValue:
       retError.message = ErrorTypes.minValue
       retError.expected = minimum
       break
+
     case ErrorTypes.multipleOf:
       retError.message = ErrorTypes.multipleOf
       retError.expected = step
       break
+
     case ErrorTypes.pattern:
       retError.message = ErrorTypes.pattern
       retError.expected = currentObject.pattern
       break
+
     case ErrorTypes.notInEnum:
       retError.message = ErrorTypes.notInEnum
       retError.expected = currentObject.enum
   }
+
   return retError
 }

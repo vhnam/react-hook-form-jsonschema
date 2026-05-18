@@ -1,9 +1,9 @@
-import React from 'react'
-import { ValidationOptions, FieldValues } from 'react-hook-form'
+import type { ComponentProps } from 'react'
+import type { RegisterOptions, FieldValues } from 'react-hook-form'
 
-import { ErrorMessage } from '../validators'
-import { JSONSchemaType } from '../../JSONSchema'
-import { JSONFormContextValues } from '../../components'
+import type { ErrorMessage } from '../validators'
+import type { JSONSchemaType } from '../../JSONSchema'
+import type { JSONFormContextValues } from '../../components'
 
 export enum InputTypes {
   generic = 'generic',
@@ -34,7 +34,7 @@ export interface BasicInputReturnType {
   name: string
   type: InputTypes
   pointer: string
-  validator: ValidationOptions
+  validator: RegisterOptions
 }
 
 export interface GenericInputParameters {
@@ -42,10 +42,10 @@ export interface GenericInputParameters {
 }
 
 export interface UseRadioReturnType extends BasicInputReturnType {
-  getLabelProps(): React.ComponentProps<'label'>
+  getLabelProps(): ComponentProps<'label'>
   getItems(): string[]
-  getItemInputProps(index: number): React.ComponentProps<'input'>
-  getItemLabelProps(index: number): React.ComponentProps<'label'>
+  getItemInputProps(index: number): ComponentProps<'input'>
+  getItemLabelProps(index: number): ComponentProps<'label'>
 }
 
 export interface UseRadioParameters {
@@ -54,8 +54,8 @@ export interface UseRadioParameters {
 
 export interface UseCheckboxReturnType extends BasicInputReturnType {
   getItems(): string[]
-  getItemInputProps(index: number): React.ComponentProps<'input'>
-  getItemLabelProps(index: number): React.ComponentProps<'label'>
+  getItemInputProps(index: number): ComponentProps<'input'>
+  getItemLabelProps(index: number): ComponentProps<'label'>
   isSingle: boolean
 }
 
@@ -65,10 +65,10 @@ export interface UseCheckboxParameters {
 
 export interface UseSelectReturnType extends BasicInputReturnType {
   type: InputTypes.select
-  getLabelProps(): React.ComponentProps<'label'>
-  getItemOptionProps(index: number): React.ComponentProps<'option'>
+  getLabelProps(): ComponentProps<'label'>
+  getItemOptionProps(index: number): ComponentProps<'option'>
   getItems(): string[]
-  getSelectProps(): React.ComponentProps<'select'>
+  getSelectProps(): ComponentProps<'select'>
 }
 
 export interface UseSelectParameters {
@@ -76,8 +76,8 @@ export interface UseSelectParameters {
 }
 
 export interface UseRawInputReturnType extends BasicInputReturnType {
-  getLabelProps(): React.ComponentProps<'label'>
-  getInputProps(): React.ComponentProps<'input'>
+  getLabelProps(): ComponentProps<'label'>
+  getInputProps(): ComponentProps<'input'>
 }
 
 export interface UseRawInputParameters {
@@ -89,8 +89,8 @@ export interface UseInputParameters {
 }
 
 export interface UseTextAreaReturnType extends BasicInputReturnType {
-  getLabelProps(): React.ComponentProps<'label'>
-  getTextAreaProps(): React.ComponentProps<'textarea'>
+  getLabelProps(): ComponentProps<'label'>
+  getTextAreaProps(): ComponentProps<'textarea'>
 }
 
 export interface UseTextAreaParameters {

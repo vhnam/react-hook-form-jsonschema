@@ -3,11 +3,11 @@ export function deepFreeze(obj) {
   const propNames = Object.getOwnPropertyNames(obj)
 
   // Freezes each property before freezing the object itself
-  propNames.forEach(function(name) {
+  propNames.forEach(function (name) {
     const prop = obj[name]
 
     // Freezes prop if it is an object
-    if (typeof prop == 'object' && prop !== null) deepFreeze(prop)
+    if (typeof prop === 'object' && prop !== null) deepFreeze(prop)
   })
 
   // Freezes itself

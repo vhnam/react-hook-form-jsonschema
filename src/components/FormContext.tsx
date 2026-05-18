@@ -1,7 +1,14 @@
-import React, { FC, createContext, useContext, useMemo } from 'react'
-import { useForm, FieldValues } from 'react-hook-form'
+import {
+  createContext,
+  useContext,
+  useMemo,
+  useRef,
+  type ComponentProps,
+} from 'react'
+import type { FieldValues } from 'react-hook-form'
+import { useForm } from 'react-hook-form'
 
-import { FormContextProps, JSONFormContextValues } from './types'
+import type { FormContextProps, JSONFormContextValues } from './types'
 import {
   getObjectFromForm,
   getIdSchemaPairs,
@@ -13,12 +20,12 @@ export const InternalFormContext = createContext<JSONFormContextValues | null>(
 )
 
 export function useFormContext<
-  T extends FieldValues = FieldValues
+  T extends FieldValues = FieldValues,
 >(): JSONFormContextValues<T> {
   return useContext(InternalFormContext) as JSONFormContextValues<T>
 }
 
-export const FormContext: FC<FormContextProps> = props => {
+export const FormContext = (props: FormContextProps) => {
   const {
     formProps: userFormProps,
     onChange,
@@ -32,10 +39,10 @@ export const FormContext: FC<FormContextProps> = props => {
     defaultValues,
     mode: validationMode,
     reValidateMode: revalidateMode,
-    submitFocusError: submitFocusError,
+    shouldFocusError: submitFocusError,
   })
 
-  const isFirstRender = React.useRef(true)
+  const isFirstRender = useRef(true)
 
   if (typeof onChange === 'function') {
     const watchedInputs = methods.watch()
@@ -55,24 +62,28 @@ export const FormContext: FC<FormContextProps> = props => {
   const formContext: JSONFormContextValues = useMemo(() => {
     return {
       ...methods,
+      errors: methods.formState.errors,
       schema: resolvedSchemaRefs,
-      idMap: idMap,
+      idMap,
       customValidators: props.customValidators,
     }
   }, [methods, resolvedSchemaRefs, idMap, props.customValidators])
 
-  const formProps: React.ComponentProps<'form'> = { ...userFormProps }
+  const formProps: ComponentProps<'form'> = { ...userFormProps }
 
-  formProps.onSubmit = methods.handleSubmit(async (data, event) => {
+  const submitHandler = methods.handleSubmit((data, event) => {
     if (props.onSubmit) {
-      return props.onSubmit({
+      void props.onSubmit({
         data: getObjectFromForm(props.schema, data),
-        event: event,
+        event,
         methods: formContext,
       })
     }
-    return
   })
+
+  formProps.onSubmit = (event) => {
+    void submitHandler(event)
+  }
 
   if (props.noNativeValidate) {
     formProps.noValidate = props.noNativeValidate

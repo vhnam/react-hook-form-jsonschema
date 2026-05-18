@@ -35,8 +35,7 @@ const mockSchema = {
           $ref: 'https://vtex.io/streetType',
         },
         streetNumber: {
-          $ref:
-            'https://vtex.io/oneSampleschema.json#/definitions/streetNumber',
+          $ref: 'https://vtex.io/oneSampleschema.json#/definitions/streetNumber',
         },
         zipCode: {
           $ref: 'https://vtex.io/definitions.json#/zipCode',

@@ -1,11 +1,10 @@
-import React, { FC } from 'react'
-import { render, wait } from '@vtex/test-tools/react'
+import { render, waitFor } from '@testing-library/react'
 
 import { useSelect } from '../useSelect'
 import { FormContext } from '../../components'
-import mockSelectSchema, { toFixed } from '../__mocks__/mockSchema'
+import mockSelectSchema from '../__mocks__/mockSchema'
 
-const MockSelect: FC<{ pointer: string }> = props => {
+const MockSelect = (props: { pointer: string }) => {
   const methods = useSelect(props.pointer)
 
   return (
@@ -82,12 +81,7 @@ test('should have boolean true and false', () => {
 test('should raise error', async () => {
   const { getByText } = render(
     // esling-disable-next-line no-console
-    <FormContext
-      schema={mockSelectSchema}
-      onSubmit={() => {
-        return
-      }}
-    >
+    <FormContext schema={mockSelectSchema} onSubmit={() => {}}>
       <MockSelect pointer="#/properties/errorTest" />
       <input type="submit" value="Submit" />
     </FormContext>
@@ -95,5 +89,5 @@ test('should raise error', async () => {
 
   getByText('Submit').click()
 
-  await wait(() => expect(getByText('This is an error!')).toBeDefined())
+  await waitFor(() => expect(getByText('This is an error!')).toBeDefined())
 })

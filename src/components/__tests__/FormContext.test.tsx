@@ -1,9 +1,8 @@
-import { fireEvent, render } from '@vtex/test-tools/react'
-import React from 'react'
+import { fireEvent, render } from '@testing-library/react'
 import { Controller } from 'react-hook-form'
 
 import { useObject } from '../../hooks/useObject'
-import mockSchema from '../__mocks__/mockSchema'
+import mockSchema from '../__mocks__/mockFormSchema'
 import { FormContext } from '../FormContext'
 
 const ObjectRenderer = (props: { pointer: string }) => {
@@ -11,16 +10,18 @@ const ObjectRenderer = (props: { pointer: string }) => {
 
   return (
     <>
-      {fields.map(field => {
+      {fields.map((field) => {
         const fieldJsonSchema = field.getObject()
 
         return (
           <Controller
-            as={<input aria-label={fieldJsonSchema.title} name={field.name} />}
             control={field.formContext.control}
             defaultValue=""
             key={field.pointer}
             name={field.pointer}
+            render={({ field: controllerField }) => (
+              <input aria-label={fieldJsonSchema.title} {...controllerField} />
+            )}
           />
         )
       })}
@@ -39,7 +40,7 @@ test('should call onChange when something changes', () => {
 
   expect(changeHandlerMock).toHaveBeenCalledTimes(0)
 
-  let changeValue
+  let changeValue: Record<string, string> = {}
 
   Object.entries(mockSchema.properties).forEach(
     ([fieldName, fieldProperties], index) => {

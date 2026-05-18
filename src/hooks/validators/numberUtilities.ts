@@ -1,13 +1,14 @@
-import { ValidationOptions } from 'react-hook-form'
+import type { RegisterOptions } from 'react-hook-form'
 
-import { JSONSchemaType } from '../../JSONSchema'
+import type { JSONSchemaType } from '../../JSONSchema'
 import { ErrorTypes } from './types'
 
 // Used for exclusiveMinimum and exclusiveMaximum values
 const EPSILON = 0.0001
 
 export const toFixed = (value: number, precision: number): string => {
-  const power = Math.pow(10, precision || 0)
+  const power = 10 ** (precision || 0)
+
   return String(Math.round(value * power) / power)
 }
 
@@ -21,12 +22,14 @@ export const getNumberStep = (
         ? parseInt(currentObject.multipleOf)
         : parseFloat(currentObject.multipleOf)
       : currentObject.type === 'integer'
-      ? 1
-      : 'any'
+        ? 1
+        : 'any'
 
-  let decimalPlaces = undefined
+  let decimalPlaces
+
   if (currentObject.multipleOf) {
     const decimals = currentObject.multipleOf.toString().split('.')[1]
+
     if (decimals) {
       decimalPlaces = decimals.length
     } else {
@@ -47,8 +50,9 @@ export const getNumberMinimum = (
     currentObject.exclusiveMinimum !== undefined
       ? currentObject.exclusiveMinimum
       : currentObject.minimum !== undefined
-      ? currentObject.minimum
-      : undefined
+        ? currentObject.minimum
+        : undefined
+
   if (minimum !== undefined && currentObject.exclusiveMinimum !== undefined) {
     if (step && step != 'any') {
       minimum += step
@@ -56,6 +60,7 @@ export const getNumberMinimum = (
       minimum += EPSILON
     }
   }
+
   return minimum
 }
 
@@ -69,8 +74,9 @@ export const getNumberMaximum = (
     currentObject.exclusiveMaximum !== undefined
       ? parseFloat(currentObject.exclusiveMaximum)
       : currentObject.maximum !== undefined
-      ? parseFloat(currentObject.maximum)
-      : undefined
+        ? parseFloat(currentObject.maximum)
+        : undefined
+
   if (maximum !== undefined && currentObject.exclusiveMaximum !== undefined) {
     if (step && step != 'any') {
       maximum -= step
@@ -85,11 +91,11 @@ export const getNumberMaximum = (
 export const getNumberValidator = (
   currentObject: JSONSchemaType,
   required: boolean
-): ValidationOptions => {
+): RegisterOptions => {
   const minimum = getNumberMinimum(currentObject)
   const maximum = getNumberMaximum(currentObject)
 
-  const validator: ValidationOptions = {
+  const validator: RegisterOptions = {
     validate: {
       multipleOf: (value: string) => {
         if (currentObject.type === 'integer' && value) {
@@ -98,10 +104,10 @@ export const getNumberValidator = (
             (parseInt(value) % parseInt(currentObject.multipleOf) === 0 ||
               ErrorTypes.multipleOf)
           )
-        } else {
-          // TODO: implement float checking with epsilon
-          return true
         }
+
+        // TODO: implement float checking with epsilon
+        return true
       },
     },
   }

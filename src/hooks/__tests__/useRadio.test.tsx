@@ -1,11 +1,10 @@
-import React, { FC } from 'react'
-import { render, wait } from '@vtex/test-tools/react'
+import { render, waitFor } from '@testing-library/react'
 
 import { useRadio } from '../useRadio'
 import { FormContext } from '../../components'
-import mockRadioSchema, { toFixed } from '../__mocks__/mockSchema'
+import mockRadioSchema from '../__mocks__/mockSchema'
 
-const MockRadio: FC<{ pointer: string }> = props => {
+const MockRadio = (props: { pointer: string }) => {
   const methods = useRadio(props.pointer)
 
   return (
@@ -76,12 +75,7 @@ test('should have boolean true and false', () => {
 
 test('should raise error', async () => {
   const { getByText } = render(
-    <FormContext
-      schema={mockRadioSchema}
-      onSubmit={() => {
-        return
-      }}
-    >
+    <FormContext schema={mockRadioSchema} onSubmit={() => {}}>
       <MockRadio pointer="#/properties/errorTest" />
       <input type="submit" value="Submit" />
     </FormContext>
@@ -89,5 +83,5 @@ test('should raise error', async () => {
 
   getByText('Submit').click()
 
-  await wait(() => expect(getByText('This is an error!')).toBeDefined())
+  await waitFor(() => expect(getByText('This is an error!')).toBeDefined())
 })

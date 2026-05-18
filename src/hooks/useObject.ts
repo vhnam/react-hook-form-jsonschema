@@ -1,11 +1,15 @@
-import {
+import type {
   UseObjectProperties,
   UseObjectReturnType,
   BasicInputReturnType,
   UISchemaType,
-  UITypes,
 } from './types'
-import { JSONSubSchemaInfo, JSONSchemaType } from '../JSONSchema'
+import { UITypes } from './types'
+import type {
+  JSONSubSchemaInfo,
+  JSONSchemaType,
+  ObjectJSONSchemaType,
+} from '../JSONSchema'
 import {
   useAnnotatedSchemaFromPointer,
   concatFormPointer,
@@ -17,7 +21,8 @@ import {
 import { getGenericInput } from './useGenericInput'
 import { getInputCustomFields } from './useInput'
 import { getRadioCustomFields } from './useRadio'
-import { useFormContext, JSONFormContextValues } from '../components'
+import type { JSONFormContextValues } from '../components'
+import { useFormContext } from '../components'
 import { getSelectCustomFields } from './useSelect'
 import { getHiddenCustomFields } from './useHidden'
 import { getPasswordCustomFields } from './usePassword'
@@ -37,16 +42,22 @@ function getFromGeneric(
       } else {
         inputs.push(getInputCustomFields(genericInput))
       }
+
       break
+
     case 'integer':
+
     case 'number':
       inputs.push(getInputCustomFields(genericInput))
       break
+
     case 'array':
+
     case 'boolean':
       inputs.push(getCheckboxCustomFields(genericInput))
       break
   }
+
   return inputs
 }
 
@@ -72,7 +83,6 @@ function getChildProperties(
       formContext
     )
 
-    // eslint-disable-next-line @typescript-eslint/no-use-before-define
     const newInput = getStructure(
       formContext,
       currentPointerInfo,
@@ -98,11 +108,13 @@ function getStructure(
   const genericInput = getGenericInput(formContext, pointerInfo, pointer)
 
   if (JSONSchema.type === 'object') {
-    const objKeys = Object.keys(JSONSchema.properties)
+    const properties = (JSONSchema as ObjectJSONSchemaType).properties ?? {}
+    const objKeys = Object.keys(properties)
     const childInputs = objKeys.reduce(
       getChildProperties(pointer, UISchema, formContext, data),
       []
     )
+
     return childInputs
   }
 
@@ -114,24 +126,31 @@ function getStructure(
     case UITypes.default:
       inputs = inputs.concat(getFromGeneric(genericInput))
       break
+
     case UITypes.checkbox:
       inputs.push(getCheckboxCustomFields(genericInput))
       break
+
     case UITypes.hidden:
       inputs.push(getHiddenCustomFields(genericInput))
       break
+
     case UITypes.input:
       inputs.push(getInputCustomFields(genericInput))
       break
+
     case UITypes.password:
       inputs.push(getPasswordCustomFields(genericInput))
       break
+
     case UITypes.radio:
       inputs.push(getRadioCustomFields(genericInput))
       break
+
     case UITypes.select:
       inputs.push(getSelectCustomFields(genericInput))
       break
+
     case UITypes.textArea:
       inputs.push(getTextAreaCustomFields(genericInput))
       break
@@ -140,7 +159,7 @@ function getStructure(
   return inputs
 }
 
-export const useObject: UseObjectProperties = props => {
+export const useObject: UseObjectProperties = (props) => {
   const formContext = useFormContext()
   const data = getObjectFromForm(formContext.schema, formContext.getValues())
   const childArray = getStructure(

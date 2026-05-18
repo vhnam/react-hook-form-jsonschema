@@ -1,11 +1,10 @@
-import React, { FC } from 'react'
-import { render, wait } from '@vtex/test-tools/react'
+import { render, waitFor } from '@testing-library/react'
 
 import { useCheckbox } from '../useCheckbox'
 import { FormContext } from '../../components'
 import mockCheckboxSchema from '../__mocks__/mockSchema'
 
-const MockCheckbox: FC<{ pointer: string }> = props => {
+const MockCheckbox = (props: { pointer: string }) => {
   const methods = useCheckbox(props.pointer)
 
   return (
@@ -14,10 +13,7 @@ const MockCheckbox: FC<{ pointer: string }> = props => {
         return (
           <label {...methods.getItemLabelProps(index)} key={`${value}${index}`}>
             {methods.isSingle ? methods.getObject().title : value}
-            <input
-              {...methods.getItemInputProps(index)}
-              ref={methods.formContext.register({})}
-            />
+            <input {...methods.getItemInputProps(index)} />
           </label>
         )
       })}
@@ -26,7 +22,7 @@ const MockCheckbox: FC<{ pointer: string }> = props => {
   )
 }
 
-test('should have boolean true and false', done => {
+test('should have boolean true and false', (done) => {
   const { getByText } = render(
     <FormContext
       schema={mockCheckboxSchema}
@@ -39,6 +35,7 @@ test('should have boolean true and false', done => {
       <input type="submit" value="Submit" />
     </FormContext>
   )
+
   expect(getByText('test-useSelectBoolean')).toBeDefined()
 
   getByText('test-useSelectBoolean').click()
@@ -47,12 +44,7 @@ test('should have boolean true and false', done => {
 
 test('should raise error', async () => {
   const { getByText } = render(
-    <FormContext
-      schema={mockCheckboxSchema}
-      onSubmit={() => {
-        return
-      }}
-    >
+    <FormContext schema={mockCheckboxSchema} onSubmit={() => {}}>
       <MockCheckbox pointer="#/properties/arrayErrorTest" />
       <input type="submit" value="Submit" />
     </FormContext>
@@ -60,5 +52,5 @@ test('should raise error', async () => {
 
   getByText('Submit').click()
 
-  await wait(() => expect(getByText('This is an error!')).toBeDefined())
+  await waitFor(() => expect(getByText('This is an error!')).toBeDefined())
 })

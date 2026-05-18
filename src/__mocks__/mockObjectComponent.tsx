@@ -1,20 +1,18 @@
-import React, { FC } from 'react'
-
-import {
-  useObject,
+import type {
   UseRawInputReturnType,
   InputReturnTypes,
-  InputTypes,
   UseRadioReturnType,
   UseSelectReturnType,
   UISchemaType,
   UseCheckboxReturnType,
 } from '../hooks'
+import { useObject, InputTypes } from '../hooks'
 
-const SpecializedObject: FC<{ baseObject: InputReturnTypes }> = props => {
+const SpecializedObject = (props: { baseObject: InputReturnTypes }) => {
   switch (props.baseObject.type) {
     case InputTypes.input: {
       const inputObject = props.baseObject as UseRawInputReturnType
+
       return (
         <>
           <label {...inputObject.getLabelProps()}>{inputObject.name}</label>
@@ -22,8 +20,10 @@ const SpecializedObject: FC<{ baseObject: InputReturnTypes }> = props => {
         </>
       )
     }
+
     case InputTypes.radio: {
       const radioObject = props.baseObject as UseRadioReturnType
+
       return (
         <>
           <label {...radioObject.getLabelProps()}>{radioObject.name}</label>
@@ -41,8 +41,10 @@ const SpecializedObject: FC<{ baseObject: InputReturnTypes }> = props => {
         </>
       )
     }
+
     case InputTypes.select: {
       const selectObject = props.baseObject as UseSelectReturnType
+
       return (
         <>
           <label {...selectObject.getLabelProps()}>{selectObject.name}</label>
@@ -61,8 +63,10 @@ const SpecializedObject: FC<{ baseObject: InputReturnTypes }> = props => {
         </>
       )
     }
+
     case InputTypes.checkbox: {
       const checkboxObject = props.baseObject as UseCheckboxReturnType
+
       return (
         <>
           {checkboxObject.getItems().map((value, index) => {
@@ -81,13 +85,14 @@ const SpecializedObject: FC<{ baseObject: InputReturnTypes }> = props => {
       )
     }
   }
+
   return <></>
 }
 
-export const MockObject: FC<{
+export const MockObject = (props: {
   pointer: string
   UISchema?: UISchemaType
-}> = props => {
+}) => {
   const methods = useObject({
     pointer: props.pointer,
     UISchema: props.UISchema,
@@ -95,7 +100,7 @@ export const MockObject: FC<{
 
   return (
     <>
-      {methods.map(obj => (
+      {methods.map((obj) => (
         <div key={`${obj.type}${obj.pointer}`}>
           <SpecializedObject baseObject={obj} />
           {obj.getError() && <p>This is an error!</p>}

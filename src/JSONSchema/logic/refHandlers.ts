@@ -1,4 +1,4 @@
-import { JSONSchemaType, IDSchemaPair } from '../types'
+import type { JSONSchemaType, IDSchemaPair } from '../types'
 import {
   getSplitPointer,
   concatFormPointer,
@@ -52,11 +52,12 @@ export const resolveRefs = (
   let resolvedRefs: JSONSchemaType = {}
 
   if (schema.$ref) {
-    const $ref = schema.$ref
+    const { $ref } = schema
 
     if (usedRefs.indexOf($ref) > -1) {
       return resolvedRefs
     }
+
     usedRefs.push($ref)
 
     resolvedRefs = {
@@ -69,13 +70,14 @@ export const resolveRefs = (
   return Object.keys(resolvedRefs).reduce(
     (acc: JSONSchemaType, key: string) => {
       if (
-        typeof acc[key] == 'object' &&
+        typeof acc[key] === 'object' &&
         acc[key] !== null &&
         !Array.isArray(acc[key]) &&
         !(usedRefs.indexOf(acc[key].$ref) > -1)
       ) {
         acc[key] = resolveRefs(acc[key], idMap, usedRefs.slice())
       }
+
       return acc
     },
     resolvedRefs
@@ -91,7 +93,7 @@ export const getIdSchemaPairs = (schema: JSONSchemaType) => {
     return Object.keys(currentSchema).reduce(
       (IDs: Record<string, JSONSchemaType>, key: string) => {
         if (
-          typeof currentSchema[key] == 'object' &&
+          typeof currentSchema[key] === 'object' &&
           currentSchema[key] !== null &&
           !Array.isArray(currentSchema[key])
         ) {
@@ -106,6 +108,7 @@ export const getIdSchemaPairs = (schema: JSONSchemaType) => {
         }
 
         const id = currentSchema[key]
+
         if (key === '$id' && id) {
           IDs[id] = currentSchema
 
@@ -119,13 +122,15 @@ export const getIdSchemaPairs = (schema: JSONSchemaType) => {
             }
           }
         }
+
         return IDs
       },
       { [currentPointer]: currentSchema }
     )
   }
 
-  let baseUrl: URL | undefined = undefined
+  let baseUrl: URL | undefined
+
   if (schema.$id && isAbsoluteURI(schema.$id)) {
     try {
       baseUrl = new URL(schema.$id)
@@ -143,5 +148,6 @@ export const getIdSchemaPairs = (schema: JSONSchemaType) => {
       ...recursiveGetIdSchemaPairs(JSONSchemaRootPointer, schema, baseUrl),
     }
   }
+
   return recursiveGetIdSchemaPairs(JSONSchemaRootPointer, schema, baseUrl)
 }

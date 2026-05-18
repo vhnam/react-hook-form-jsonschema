@@ -1,19 +1,19 @@
-import React from 'react'
+import type { ComponentProps } from 'react'
 
-import {
+import type {
   UseTextAreaParameters,
   BasicInputReturnType,
   UseTextAreaReturnType,
-  InputTypes,
 } from './types'
+import { InputTypes } from './types'
 import { useGenericInput } from './useGenericInput'
 
 const getInputId = (pointer: string): string => {
-  return pointer + '-textarea-input'
+  return `${pointer}-textarea-input`
 }
 
 const getLabelId = (pointer: string): string => {
-  return pointer + '-textarea-label'
+  return `${pointer}-textarea-label`
 }
 
 export const getTextAreaCustomFields = (
@@ -24,7 +24,8 @@ export const getTextAreaCustomFields = (
 
   const currentObject = baseInput.getObject()
 
-  const itemProps: React.ComponentProps<'textarea'> = {}
+  const itemProps: ComponentProps<'textarea'> = {}
+
   if (currentObject.type === 'string') {
     itemProps.minLength = currentObject.minLength
     itemProps.maxLength = currentObject.maxLength
@@ -34,7 +35,8 @@ export const getTextAreaCustomFields = (
     ...baseInput,
     type: InputTypes.textArea,
     getLabelProps: () => {
-      const itemProps: React.ComponentProps<'label'> = {}
+      const itemProps: ComponentProps<'label'> = {}
+
       itemProps.id = getLabelId(baseInput.pointer)
       itemProps.htmlFor = getInputId(baseInput.pointer)
 
@@ -42,7 +44,7 @@ export const getTextAreaCustomFields = (
     },
     getTextAreaProps: () => {
       itemProps.name = baseInput.pointer
-      itemProps.ref = register(validator)
+      itemProps.ref = register(baseInput.pointer, validator)
       itemProps.required = baseInput.isRequired
       itemProps.id = getInputId(baseInput.pointer)
 
@@ -51,6 +53,6 @@ export const getTextAreaCustomFields = (
   }
 }
 
-export const useTextArea: UseTextAreaParameters = pointer => {
+export const useTextArea: UseTextAreaParameters = (pointer) => {
   return getTextAreaCustomFields(useGenericInput(pointer))
 }

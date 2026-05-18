@@ -1,12 +1,12 @@
-import { ValidationOptions } from 'react-hook-form'
+import type { RegisterOptions } from 'react-hook-form'
 
-import { JSONSchemaType } from '../../JSONSchema'
+import type { JSONSchemaType } from '../../JSONSchema'
 import { ErrorTypes } from './types'
 
 export const getStringValidator = (
   currentObject: JSONSchemaType,
-  baseValidator: ValidationOptions
-): ValidationOptions => {
+  baseValidator: RegisterOptions
+): RegisterOptions => {
   if (currentObject.minLength) {
     baseValidator.minLength = {
       value: currentObject.minLength,
@@ -27,5 +27,6 @@ export const getStringValidator = (
       message: ErrorTypes.pattern,
     }
   }
+
   return baseValidator
 }

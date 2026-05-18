@@ -1,11 +1,11 @@
-import React from 'react'
+import type { ComponentProps } from 'react'
 
-import {
+import type {
   UseCheckboxParameters,
   BasicInputReturnType,
   UseCheckboxReturnType,
-  InputTypes,
 } from './types'
+import { InputTypes } from './types'
 import {
   getNumberMaximum,
   getNumberMinimum,
@@ -20,7 +20,7 @@ const getItemInputId = (
   index: number,
   items: string[]
 ): string => {
-  return path + '-checkbox-input-' + (items[index] ? items[index] : '')
+  return `${path}-checkbox-input-${items[index] ? items[index] : ''}`
 }
 
 const getItemLabelId = (
@@ -28,7 +28,7 @@ const getItemLabelId = (
   index: number,
   items: string[]
 ): string => {
-  return path + '-checkbox-label-' + (items[index] ? items[index] : '')
+  return `${path}-checkbox-label-${items[index] ? items[index] : ''}`
 }
 
 export const getCheckboxCustomFields = (
@@ -55,6 +55,7 @@ export const getCheckboxCustomFields = (
       currentObject.items.type === 'integer'
     ) {
       const stepAndDecimalPlaces = getNumberStep(currentObject)
+
       step = stepAndDecimalPlaces[0]
       decimalPlaces = stepAndDecimalPlaces[1]
 
@@ -79,22 +80,24 @@ export const getCheckboxCustomFields = (
     ...baseInput,
     type: InputTypes.checkbox,
     isSingle: currentObject.type === 'boolean',
-    getItemInputProps: index => {
-      const itemProps: React.ComponentProps<'input'> = { key: '' }
+    getItemInputProps: (index) => {
+      const itemProps: ComponentProps<'input'> = { key: '' }
+
       // This ternary decides wether to treat the input as an array or not
       itemProps.name =
         currentObject.type === 'array'
           ? `${baseInput.pointer}[${index}]`
           : baseInput.pointer
-      itemProps.ref = register(validator)
+      itemProps.ref = register(itemProps.name, validator)
       itemProps.type = 'checkbox'
       itemProps.id = getItemInputId(baseInput.pointer, index, items)
       itemProps.value = items[index]
 
       return itemProps
     },
-    getItemLabelProps: index => {
-      const itemProps: React.ComponentProps<'label'> = {}
+    getItemLabelProps: (index) => {
+      const itemProps: ComponentProps<'label'> = {}
+
       itemProps.id = getItemLabelId(baseInput.pointer, index, items)
       itemProps.htmlFor = getItemInputId(baseInput.pointer, index, items)
 
@@ -104,6 +107,6 @@ export const getCheckboxCustomFields = (
   }
 }
 
-export const useCheckbox: UseCheckboxParameters = path => {
+export const useCheckbox: UseCheckboxParameters = (path) => {
   return getCheckboxCustomFields(useGenericInput(path))
 }

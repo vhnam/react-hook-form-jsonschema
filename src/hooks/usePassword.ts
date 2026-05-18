@@ -1,4 +1,4 @@
-import {
+import type {
   UseInputParameters,
   BasicInputReturnType,
   UseRawInputReturnType,
@@ -12,6 +12,6 @@ export const getPasswordCustomFields = (
   return getRawInputCustomFields(baseObject, 'password')
 }
 
-export const usePassword: UseInputParameters = pointer => {
+export const usePassword: UseInputParameters = (pointer) => {
   return getPasswordCustomFields(useGenericInput(pointer))
 }

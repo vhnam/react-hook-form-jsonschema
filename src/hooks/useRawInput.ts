@@ -1,11 +1,11 @@
-import React from 'react'
+import type { ComponentProps } from 'react'
 
-import {
+import type {
   UseRawInputParameters,
   BasicInputReturnType,
   UseRawInputReturnType,
-  InputTypes,
 } from './types'
+import { InputTypes } from './types'
 import {
   getNumberMaximum,
   getNumberMinimum,
@@ -14,11 +14,11 @@ import {
 } from './validators'
 
 const getInputId = (pointer: string, inputType: string): string => {
-  return pointer + '-' + inputType + '-input'
+  return `${pointer}-${inputType}-input`
 }
 
 const getLabelId = (pointer: string, inputType: string): string => {
-  return pointer + '-' + inputType + '-label'
+  return `${pointer}-${inputType}-label`
 }
 
 export const getRawInputCustomFields = (
@@ -35,7 +35,8 @@ export const getRawInputCustomFields = (
   let step: number | 'any'
   let decimalPlaces: number | undefined
 
-  const itemProps: React.ComponentProps<'input'> = { key: '' }
+  const itemProps: ComponentProps<'input'> = { key: '' }
+
   if (currentObject.type === 'string') {
     itemProps.pattern = currentObject.pattern
     itemProps.minLength = currentObject.minLength
@@ -45,6 +46,7 @@ export const getRawInputCustomFields = (
     currentObject.type === 'integer'
   ) {
     const stepAndDecimalPlaces = getNumberStep(currentObject)
+
     step = stepAndDecimalPlaces[0]
     decimalPlaces = stepAndDecimalPlaces[1]
 
@@ -53,15 +55,15 @@ export const getRawInputCustomFields = (
 
     itemProps.min = `${minimum}`
     itemProps.max = `${maximum}`
-    itemProps.step =
-      step === 'any' ? 'any' : toFixed(step, decimalPlaces ? decimalPlaces : 0)
+    itemProps.step = step === 'any' ? 'any' : toFixed(step, decimalPlaces || 0)
   }
 
   return {
     ...baseInput,
     type: InputTypes.input,
     getLabelProps: () => {
-      const itemProps: React.ComponentProps<'label'> = {}
+      const itemProps: ComponentProps<'label'> = {}
+
       itemProps.id = getLabelId(baseInput.pointer, inputType)
       itemProps.htmlFor = getInputId(baseInput.pointer, inputType)
 
@@ -69,7 +71,7 @@ export const getRawInputCustomFields = (
     },
     getInputProps: () => {
       itemProps.name = baseInput.pointer
-      itemProps.ref = register(validator)
+      itemProps.ref = register(baseInput.pointer, validator)
       itemProps.type = inputType
       itemProps.required = baseInput.isRequired
       itemProps.id = getInputId(baseInput.pointer, inputType)

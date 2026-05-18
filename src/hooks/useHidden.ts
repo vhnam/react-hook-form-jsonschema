@@ -1,4 +1,4 @@
-import {
+import type {
   UseInputParameters,
   BasicInputReturnType,
   UseRawInputReturnType,
@@ -18,6 +18,6 @@ export const getHiddenCustomFields = (
   }
 }
 
-export const useHidden: UseInputParameters = pointer => {
+export const useHidden: UseInputParameters = (pointer) => {
   return getHiddenCustomFields(useGenericInput(pointer))
 }

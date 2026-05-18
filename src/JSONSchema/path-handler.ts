@@ -1,4 +1,4 @@
-import { JSONSchemaType, JSONSubSchemaInfo } from './types'
+import type { JSONSchemaType, JSONSubSchemaInfo } from './types'
 import {
   getObjectFromForm,
   concatFormPointer,
@@ -31,8 +31,10 @@ const getDataFromPointer = (
       (currentContext, node: string) => {
         if (node === 'properties' && !insideProperties) {
           insideProperties = true
+
           return { ...currentContext, insideProperties: true }
         }
+
         insideProperties = false
 
         return {
