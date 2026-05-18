@@ -736,14 +736,23 @@ Does **not** fetch a JSON Schema from a remote URI (optional in the spec). Absol
 
 ## TODO/Next Steps
 
+### JSON Schema
+
 - [x] Improve array type support (and its validation).
-- [ ] Implement `dependencies` keyword for dynamic forms.
-- [ ] Implement `allOf`, `anyOf`, `oneOf`, and `not` for richer schemas.
-- [ ] Implement built-in validation for all `format` keyword values.
-- [ ] Maybe? Dedicated hooks per format (e.g. `useDate` for `date-time`).
 - [ ] Apply schema `default` values to the form automatically.
-- [ ] Implement `const` keyword.
+- [ ] Implement `const`.
+- [ ] Implement built-in validation for `format` keyword values.
+- [ ] Implement `dependencies` (Draft 07) for conditional fields.
+- [ ] Implement `allOf`, `anyOf`, `oneOf`, and `not` for composite schemas.
+- [ ] Optional: dedicated hooks per `format` (e.g. `useDate` for `date-time`).
 - [ ] Warn when schema keywords are invalid for their declared types.
+- [ ] Per-field error messages for built-in validation; scope customValidators per field.
+
+### Compatibility
+
+- [ ] Official React 19 support (peer deps + test matrix).
+- [ ] TypeScript 6 support (upgrade toolchain, types, and CI).
+- [ ] ESLint 10 support (upgrade lint config and plugins).
 
 ## Useful resources
 
