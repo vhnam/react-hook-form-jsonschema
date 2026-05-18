@@ -13,10 +13,7 @@
     "noEmitOnError": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
-    "sourceMap": true,
-    "declaration": true,
-    "declarationDir": "./output",
-    "outDir": "./output"
+    "sourceMap": true
   },
   "exclude": ["node_modules", "output", "example"]
 }

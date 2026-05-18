@@ -1,5 +1,6 @@
 import type { ComponentProps } from 'react'
 
+import type { StringJSONSchemaType } from '../JSONSchema'
 import type {
   UseTextAreaParameters,
   BasicInputReturnType,
@@ -27,8 +28,10 @@ export const getTextAreaCustomFields = (
   const itemProps: ComponentProps<'textarea'> = {}
 
   if (currentObject.type === 'string') {
-    itemProps.minLength = currentObject.minLength
-    itemProps.maxLength = currentObject.maxLength
+    const stringSchema = currentObject as StringJSONSchemaType
+
+    itemProps.minLength = stringSchema.minLength
+    itemProps.maxLength = stringSchema.maxLength
   }
 
   return {
@@ -42,14 +45,12 @@ export const getTextAreaCustomFields = (
 
       return itemProps
     },
-    getTextAreaProps: () => {
-      itemProps.name = baseInput.pointer
-      itemProps.ref = register(baseInput.pointer, validator)
-      itemProps.required = baseInput.isRequired
-      itemProps.id = getInputId(baseInput.pointer)
-
-      return itemProps
-    },
+    getTextAreaProps: () => ({
+      ...itemProps,
+      ...register(baseInput.pointer, validator),
+      required: baseInput.isRequired,
+      id: getInputId(baseInput.pointer),
+    }),
   }
 }
 

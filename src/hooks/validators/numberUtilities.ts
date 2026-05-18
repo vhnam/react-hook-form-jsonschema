@@ -1,6 +1,6 @@
 import type { RegisterOptions } from 'react-hook-form'
 
-import type { JSONSchemaType } from '../../JSONSchema'
+import type { JSONSchemaType, NumberJSONSchemaType } from '../../JSONSchema'
 import { ErrorTypes } from './types'
 
 // Used for exclusiveMinimum and exclusiveMaximum values
@@ -15,20 +15,20 @@ export const toFixed = (value: number, precision: number): string => {
 export const getNumberStep = (
   currentObject: JSONSchemaType
 ): [number | 'any', number | undefined] => {
+  const numberSchema = currentObject as NumberJSONSchemaType
+
   // Get dominant step value if it is defined
   const step =
-    currentObject.multipleOf !== undefined
-      ? currentObject.type === 'integer'
-        ? parseInt(currentObject.multipleOf)
-        : parseFloat(currentObject.multipleOf)
-      : currentObject.type === 'integer'
+    numberSchema.multipleOf !== undefined
+      ? numberSchema.multipleOf
+      : numberSchema.type === 'integer'
         ? 1
         : 'any'
 
-  let decimalPlaces
+  let decimalPlaces: number | undefined
 
-  if (currentObject.multipleOf) {
-    const decimals = currentObject.multipleOf.toString().split('.')[1]
+  if (numberSchema.multipleOf != null) {
+    const decimals = numberSchema.multipleOf.toString().split('.')[1]
 
     if (decimals) {
       decimalPlaces = decimals.length
@@ -43,17 +43,18 @@ export const getNumberStep = (
 export const getNumberMinimum = (
   currentObject: JSONSchemaType
 ): number | undefined => {
+  const numberSchema = currentObject as NumberJSONSchemaType
   const [step] = getNumberStep(currentObject)
 
   // Calculates whether there is a minimum or exclusiveMinimum value defined somewhere
   let minimum =
-    currentObject.exclusiveMinimum !== undefined
-      ? currentObject.exclusiveMinimum
-      : currentObject.minimum !== undefined
-        ? currentObject.minimum
+    numberSchema.exclusiveMinimum !== undefined
+      ? numberSchema.exclusiveMinimum
+      : numberSchema.minimum !== undefined
+        ? numberSchema.minimum
         : undefined
 
-  if (minimum !== undefined && currentObject.exclusiveMinimum !== undefined) {
+  if (minimum !== undefined && numberSchema.exclusiveMinimum !== undefined) {
     if (step && step != 'any') {
       minimum += step
     } else {
@@ -67,17 +68,18 @@ export const getNumberMinimum = (
 export const getNumberMaximum = (
   currentObject: JSONSchemaType
 ): number | undefined => {
+  const numberSchema = currentObject as NumberJSONSchemaType
   const [step] = getNumberStep(currentObject)
 
   // Calculates wether there is a maximum or exclusiveMaximum value defined somewhere
   let maximum =
-    currentObject.exclusiveMaximum !== undefined
-      ? parseFloat(currentObject.exclusiveMaximum)
-      : currentObject.maximum !== undefined
-        ? parseFloat(currentObject.maximum)
+    numberSchema.exclusiveMaximum !== undefined
+      ? numberSchema.exclusiveMaximum
+      : numberSchema.maximum !== undefined
+        ? numberSchema.maximum
         : undefined
 
-  if (maximum !== undefined && currentObject.exclusiveMaximum !== undefined) {
+  if (maximum !== undefined && numberSchema.exclusiveMaximum !== undefined) {
     if (step && step != 'any') {
       maximum -= step
     } else {
@@ -92,17 +94,20 @@ export const getNumberValidator = (
   currentObject: JSONSchemaType,
   required: boolean
 ): RegisterOptions => {
+  const numberSchema = currentObject as NumberJSONSchemaType
   const minimum = getNumberMinimum(currentObject)
   const maximum = getNumberMaximum(currentObject)
 
   const validator: RegisterOptions = {
     validate: {
       multipleOf: (value: string) => {
-        if (currentObject.type === 'integer' && value) {
+        if (numberSchema.type === 'integer' && value) {
+          const multipleOf = numberSchema.multipleOf
+
           return (
-            currentObject.multipleOf &&
-            (parseInt(value) % parseInt(currentObject.multipleOf) === 0 ||
-              ErrorTypes.multipleOf)
+            (multipleOf != null &&
+              Number.parseInt(value, 10) % multipleOf === 0) ||
+            ErrorTypes.multipleOf
           )
         }
 
@@ -116,7 +121,7 @@ export const getNumberValidator = (
     validator.required = ErrorTypes.required
   }
 
-  if (currentObject.type === 'integer') {
+  if (numberSchema.type === 'integer') {
     validator.pattern = {
       value: /^([+-]?[1-9]\d*|0)$/,
       message: ErrorTypes.pattern,

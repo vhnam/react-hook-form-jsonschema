@@ -5,6 +5,7 @@ import {
   getAnnotatedSchemaFromPointer,
   getSplitPointer,
 } from './logic'
+import { asFormDataNode, getSchemaNode } from './logic/schemaAccess'
 import { useFormContext } from '../components'
 
 const useAnnotatedSchemaFromPointer = (
@@ -18,6 +19,11 @@ const useObjectFromForm = (data: JSONSchemaType): JSONSchemaType => {
   return getObjectFromForm(useFormContext().schema, data)
 }
 
+interface PointerDataContext {
+  currentData: JSONSchemaType | undefined
+  insideProperties: boolean
+}
+
 const getDataFromPointer = (
   pointer: string,
   data: JSONSchemaType
@@ -26,27 +32,35 @@ const getDataFromPointer = (
 
   let insideProperties = false
 
-  return splitPointer
-    .reduce(
-      (currentContext, node: string) => {
-        if (node === 'properties' && !insideProperties) {
-          insideProperties = true
+  const { currentData } = splitPointer.reduce<PointerDataContext>(
+    (currentContext, node: string) => {
+      if (node === 'properties' && !insideProperties) {
+        insideProperties = true
 
-          return { ...currentContext, insideProperties: true }
-        }
+        return { ...currentContext, insideProperties: true }
+      }
 
-        insideProperties = false
+      insideProperties = false
 
-        return {
-          currentData: currentContext.currentData
-            ? currentContext.currentData[node]
-            : undefined,
-          insideProperties: true,
-        }
-      },
-      { currentData: data, insideProperties: false }
-    )
-    .currentData?.toString()
+      return {
+        currentData: currentContext.currentData
+          ? asFormDataNode(getSchemaNode(currentContext.currentData, node))
+          : undefined,
+        insideProperties: true,
+      }
+    },
+    { currentData: data, insideProperties: false }
+  )
+
+  if (
+    typeof currentData === 'string' ||
+    typeof currentData === 'number' ||
+    typeof currentData === 'boolean'
+  ) {
+    return String(currentData)
+  }
+
+  return undefined
 }
 
 export {

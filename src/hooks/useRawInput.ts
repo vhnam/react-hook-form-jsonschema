@@ -1,5 +1,6 @@
 import type { ComponentProps } from 'react'
 
+import type { NumberJSONSchemaType, StringJSONSchemaType } from '../JSONSchema'
 import type {
   UseRawInputParameters,
   BasicInputReturnType,
@@ -35,23 +36,26 @@ export const getRawInputCustomFields = (
   let step: number | 'any'
   let decimalPlaces: number | undefined
 
-  const itemProps: ComponentProps<'input'> = { key: '' }
+  const itemProps: ComponentProps<'input'> = {}
 
   if (currentObject.type === 'string') {
-    itemProps.pattern = currentObject.pattern
-    itemProps.minLength = currentObject.minLength
-    itemProps.maxLength = currentObject.maxLength
+    const stringSchema = currentObject as StringJSONSchemaType
+
+    itemProps.pattern = stringSchema.pattern
+    itemProps.minLength = stringSchema.minLength
+    itemProps.maxLength = stringSchema.maxLength
   } else if (
     currentObject.type === 'number' ||
     currentObject.type === 'integer'
   ) {
-    const stepAndDecimalPlaces = getNumberStep(currentObject)
+    const numberSchema = currentObject as NumberJSONSchemaType
+    const stepAndDecimalPlaces = getNumberStep(numberSchema)
 
     step = stepAndDecimalPlaces[0]
     decimalPlaces = stepAndDecimalPlaces[1]
 
-    minimum = getNumberMinimum(currentObject)
-    maximum = getNumberMaximum(currentObject)
+    minimum = getNumberMinimum(numberSchema)
+    maximum = getNumberMaximum(numberSchema)
 
     itemProps.min = `${minimum}`
     itemProps.max = `${maximum}`
@@ -69,15 +73,13 @@ export const getRawInputCustomFields = (
 
       return itemProps
     },
-    getInputProps: () => {
-      itemProps.name = baseInput.pointer
-      itemProps.ref = register(baseInput.pointer, validator)
-      itemProps.type = inputType
-      itemProps.required = baseInput.isRequired
-      itemProps.id = getInputId(baseInput.pointer, inputType)
-
-      return itemProps
-    },
+    getInputProps: () => ({
+        ...itemProps,
+        ...register(baseInput.pointer, validator),
+        type: inputType,
+        required: baseInput.isRequired,
+        id: getInputId(baseInput.pointer, inputType),
+      }),
   }
 }
 

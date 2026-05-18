@@ -82,18 +82,13 @@ export const getRadioCustomFields = (
 
       return labelProps
     },
-    getItemInputProps: (index) => {
-      const itemProps: ComponentProps<'input'> = { key: '' }
-
-      itemProps.name = baseInput.pointer
-      itemProps.ref = register(baseInput.pointer, validator)
-      itemProps.type = 'radio'
-      itemProps.required = baseInput.isRequired
-      itemProps.id = getItemInputId(baseInput.pointer, index, items)
-      itemProps.value = items[index]
-
-      return itemProps
-    },
+    getItemInputProps: (index) => ({
+      ...register(baseInput.pointer, validator),
+      type: 'radio',
+      required: baseInput.isRequired,
+      id: getItemInputId(baseInput.pointer, index, items),
+      value: items[index],
+    }),
     getItemLabelProps: (index) => {
       const itemProps: ComponentProps<'label'> = {}
 

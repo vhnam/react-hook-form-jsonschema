@@ -4,6 +4,7 @@ import {
   concatFormPointer,
   JSONSchemaRootPointer,
 } from './pathUtils'
+import { getSchemaProperty } from './schemaAccess'
 
 const absoluteRegExp = /^[a-z][a-z0-9+.-]*:/i
 const isAbsoluteURI = (uri: string) => {
@@ -31,14 +32,15 @@ export const getSchemaFromRef = (
       )
     }
   } else if (isURIFragmentPointer($ref) && schema) {
-    return getSplitPointer($ref).reduce(
-      (currentSchema: JSONSchemaType, pointer: string) => {
-        if (currentSchema) {
-          return currentSchema[pointer]
-        }
-      },
+    const resolved = getSplitPointer($ref).reduce<JSONSchemaType | undefined>(
+      (currentSchema, pointer) =>
+        currentSchema ? getSchemaProperty(currentSchema, pointer) : undefined,
       schema
     )
+
+    if (resolved) {
+      return resolved
+    }
   }
 
   return IDRecord[$ref]
@@ -69,13 +71,10 @@ export const resolveRefs = (
 
   return Object.keys(resolvedRefs).reduce(
     (acc: JSONSchemaType, key: string) => {
-      if (
-        typeof acc[key] === 'object' &&
-        acc[key] !== null &&
-        !Array.isArray(acc[key]) &&
-        !(usedRefs.indexOf(acc[key].$ref) > -1)
-      ) {
-        acc[key] = resolveRefs(acc[key], idMap, usedRefs.slice())
+      const child = getSchemaProperty(acc, key)
+
+      if (child && !(child.$ref && usedRefs.indexOf(child.$ref) > -1)) {
+        acc[key] = resolveRefs(child, idMap, usedRefs.slice())
       }
 
       return acc
@@ -92,32 +91,32 @@ export const getIdSchemaPairs = (schema: JSONSchemaType) => {
   ): Record<string, JSONSchemaType> => {
     return Object.keys(currentSchema).reduce(
       (IDs: Record<string, JSONSchemaType>, key: string) => {
-        if (
-          typeof currentSchema[key] === 'object' &&
-          currentSchema[key] !== null &&
-          !Array.isArray(currentSchema[key])
-        ) {
+        const child = getSchemaProperty(currentSchema, key)
+
+        if (child) {
           return {
             ...recursiveGetIdSchemaPairs(
               concatFormPointer(currentPointer, key),
-              currentSchema[key],
+              child,
               baseUrl
             ),
             ...IDs,
           }
         }
 
-        const id = currentSchema[key]
+        if (key === '$id') {
+          const id: unknown = Reflect.get(currentSchema, key)
 
-        if (key === '$id' && id) {
-          IDs[id] = currentSchema
+          if (typeof id === 'string') {
+            IDs[id] = currentSchema
 
-          if (!isAbsoluteURI(id)) {
-            try {
-              IDs[new URL(id, baseUrl).href] = currentSchema
-            } catch (e) {
-              if (!(e instanceof TypeError)) {
-                throw e
+            if (!isAbsoluteURI(id)) {
+              try {
+                IDs[new URL(id, baseUrl).href] = currentSchema
+              } catch (e) {
+                if (!(e instanceof TypeError)) {
+                  throw e
+                }
               }
             }
           }

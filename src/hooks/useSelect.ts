@@ -76,16 +76,11 @@ export const getSelectCustomFields = (
 
       return labelProps
     },
-    getSelectProps: () => {
-      const itemProps: ComponentProps<'select'> = {}
-
-      itemProps.name = baseInput.pointer
-      itemProps.ref = register(itemProps.name, validator)
-      itemProps.required = baseInput.isRequired
-      itemProps.id = getSelectId(baseInput.pointer)
-
-      return itemProps
-    },
+    getSelectProps: () => ({
+      ...register(baseInput.pointer, validator),
+      required: baseInput.isRequired,
+      id: getSelectId(baseInput.pointer),
+    }),
     getItemOptionProps: (index) => {
       const itemProps: ComponentProps<'option'> = {}
 

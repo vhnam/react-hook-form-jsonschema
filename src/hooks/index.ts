@@ -7,4 +7,5 @@ export { useRadio } from './useRadio'
 export { useSelect } from './useSelect'
 export { useTextArea } from './useTextArea'
 
-export * from './types'
+export { InputTypes, UITypes } from './types'
+export type * from './types'

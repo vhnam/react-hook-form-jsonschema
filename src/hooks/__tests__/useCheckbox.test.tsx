@@ -22,13 +22,15 @@ const MockCheckbox = (props: { pointer: string }) => {
   )
 }
 
-test('should have boolean true and false', (done) => {
+test('should have boolean true and false', async () => {
+  let submitted = false
+
   const { getByText } = render(
     <FormContext
       schema={mockCheckboxSchema}
       onSubmit={({ data }) => {
-        expect(data.booleanTest).toBe(true)
-        done()
+        expect((data as { booleanTest: boolean }).booleanTest).toBe(true)
+        submitted = true
       }}
     >
       <MockCheckbox pointer="#/properties/booleanTest" />
@@ -40,6 +42,8 @@ test('should have boolean true and false', (done) => {
 
   getByText('test-useSelectBoolean').click()
   getByText('Submit').click()
+
+  await waitFor(() => expect(submitted).toBe(true))
 })
 
 test('should raise error', async () => {
