@@ -14,7 +14,6 @@ export default defineConfig(
       'example/**',
       '**/*.min.js',
       'eslint.config.mjs',
-      'rollup.config.js',
       'setupTests.ts',
     ],
   },

@@ -19,7 +19,7 @@ const mockUISchema: UISchemaType = {
 const frozenSchema = deepFreeze(mockObjectSchema)
 
 test('should render all child properties of the schema', async () => {
-  const { getByText } = render(
+  const { getByText, getAllByText } = render(
     <FormContext schema={frozenSchema} onSubmit={() => {}}>
       <MockObject pointer="#" />
       <input type="submit" value="Submit" />
@@ -34,7 +34,9 @@ test('should render all child properties of the schema', async () => {
 
   getByText('Submit').click()
 
-  await waitFor(() => expect(getByText('This is an error!')).toBeDefined())
+  await waitFor(() => {
+    expect(getAllByText('This is an error!').length).toBeGreaterThan(0)
+  })
 })
 
 test('should raise error', async () => {

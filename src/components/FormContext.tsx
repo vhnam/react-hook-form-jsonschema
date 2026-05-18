@@ -1,8 +1,8 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useMemo,
-  useRef,
   type ComponentProps,
 } from 'react'
 import type { FieldValues } from 'react-hook-form'
@@ -42,15 +42,20 @@ export const FormContext = (props: FormContextProps) => {
     shouldFocusError: submitFocusError,
   })
 
-  const isFirstRender = useRef(true)
+  // Subscribe to errors so the provider re-renders after validation (RHF proxies formState).
+  const { errors } = methods.formState
 
-  if (typeof onChange === 'function') {
-    const watchedInputs = methods.watch()
-
-    if (isFirstRender.current === false) {
-      onChange(getObjectFromForm(props.schema, watchedInputs))
+  useEffect(() => {
+    if (typeof onChange !== 'function') {
+      return
     }
-  }
+
+    const subscription = methods.watch((formValues) => {
+      onChange(getObjectFromForm(props.schema, formValues))
+    })
+
+    return () => subscription.unsubscribe()
+  }, [methods, onChange, props.schema])
 
   const idMap = useMemo(() => getIdSchemaPairs(props.schema), [props.schema])
 
@@ -62,12 +67,12 @@ export const FormContext = (props: FormContextProps) => {
   const formContext: JSONFormContextValues = useMemo(() => {
     return {
       ...methods,
-      errors: methods.formState.errors,
+      errors,
       schema: resolvedSchemaRefs,
       idMap,
       customValidators: props.customValidators,
     }
-  }, [methods, resolvedSchemaRefs, idMap, props.customValidators])
+  }, [methods, errors, resolvedSchemaRefs, idMap, props.customValidators])
 
   const formProps: ComponentProps<'form'> = { ...userFormProps }
 
@@ -85,13 +90,8 @@ export const FormContext = (props: FormContextProps) => {
     void submitHandler(event)
   }
 
-  if (props.noNativeValidate) {
-    formProps.noValidate = props.noNativeValidate
-  }
-
-  if (isFirstRender.current === true) {
-    isFirstRender.current = false
-  }
+  // RHF owns validation; native validation blocks submit when HTML attrs mirror schema rules.
+  formProps.noValidate = props.noNativeValidate ?? true
 
   return (
     <InternalFormContext.Provider value={formContext}>

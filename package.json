@@ -22,12 +22,13 @@
     "eslint-config-prettier": "^10.1.0",
     "eslint-plugin-jest": "^28.11.0",
     "globals": "^17.6.0",
-    "husky": "^9.1.7",
     "jest": "^30.4.1",
     "jest-environment-jsdom": "^30.4.1",
+    "lefthook": "^2.1.6",
     "prettier": "^3.8.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-hook-form": "^7.76.0",
     "ts-jest": "^29.2.6",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.59.0",
@@ -42,18 +43,10 @@
     "format": "prettier --write \"**/*.{ts,js,json}\"",
     "prepublishOnly": "pnpm lint && pnpm test && pnpm build"
   },
-  "husky": {
-    "hooks": {
-      "pre-commit": "pnpm lint",
-      "pre-push": "set -o pipefail && git stash push --keep-index -m 'husky-pre-commit' && run-s test && git stash pop || true"
-    }
-  },
-  "dependencies": {
-    "react-hook-form": "^7.76.0"
-  },
   "peerDependencies": {
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "react-hook-form": "^7.76.0"
   },
   "repository": "git@github.com:vtex/react-hook-form-jsonschema.git",
   "keywords": [

@@ -58,7 +58,15 @@ test('should call onChange when something changes', () => {
 
       changeValue = { ...changeValue, [fieldName]: fieldNewValue }
 
-      expect(changeHandlerMock).toHaveBeenLastCalledWith(changeValue)
+      const expectedValues = Object.keys(mockSchema.properties).reduce(
+        (acc, key) => {
+          acc[key] = changeValue[key] ?? ''
+          return acc
+        },
+        {} as Record<string, string>
+      )
+
+      expect(changeHandlerMock).toHaveBeenLastCalledWith(expectedValues)
     }
   )
 })
