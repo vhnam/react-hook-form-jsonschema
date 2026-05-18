@@ -1,11 +1,12 @@
-import React from 'react'
+import type { ComponentProps } from 'react'
 
-import {
+import type { ArrayJSONSchemaType, JSONSchemaType } from '../JSONSchema'
+import type {
   UseCheckboxParameters,
   BasicInputReturnType,
   UseCheckboxReturnType,
-  InputTypes,
 } from './types'
+import { InputTypes } from './types'
 import {
   getNumberMaximum,
   getNumberMinimum,
@@ -20,7 +21,7 @@ const getItemInputId = (
   index: number,
   items: string[]
 ): string => {
-  return path + '-checkbox-input-' + (items[index] ? items[index] : '')
+  return `${path}-checkbox-input-${items[index] ? items[index] : ''}`
 }
 
 const getItemLabelId = (
@@ -28,7 +29,19 @@ const getItemLabelId = (
   index: number,
   items: string[]
 ): string => {
-  return path + '-checkbox-label-' + (items[index] ? items[index] : '')
+  return `${path}-checkbox-label-${items[index] ? items[index] : ''}`
+}
+
+const getSingleItemsSchema = (
+  arraySchema: ArrayJSONSchemaType
+): JSONSchemaType | undefined => {
+  const items = arraySchema.items
+
+  if (items == null || Array.isArray(items)) {
+    return undefined
+  }
+
+  return items
 }
 
 export const getCheckboxCustomFields = (
@@ -46,24 +59,29 @@ export const getCheckboxCustomFields = (
   let decimalPlaces: number | undefined
 
   if (currentObject.type === 'array') {
-    if (currentObject.items.enum) {
-      items = getEnumAsStringArray(currentObject.items)
-    } else if (currentObject.items.type === 'string') {
-      items = getEnumAsStringArray(currentObject)
-    } else if (
-      currentObject.items.type === 'number' ||
-      currentObject.items.type === 'integer'
-    ) {
-      const stepAndDecimalPlaces = getNumberStep(currentObject)
-      step = stepAndDecimalPlaces[0]
-      decimalPlaces = stepAndDecimalPlaces[1]
+    const itemSchema = getSingleItemsSchema(currentObject as ArrayJSONSchemaType)
 
-      minimum = getNumberMinimum(currentObject)
-      maximum = getNumberMaximum(currentObject)
+    if (itemSchema) {
+      if (itemSchema.enum) {
+        items = getEnumAsStringArray(itemSchema)
+      } else if (itemSchema.type === 'string') {
+        items = getEnumAsStringArray(currentObject)
+      } else if (
+        itemSchema.type === 'number' ||
+        itemSchema.type === 'integer'
+      ) {
+        const stepAndDecimalPlaces = getNumberStep(currentObject)
 
-      if (minimum !== undefined && maximum !== undefined && step != 'any') {
-        for (let i = minimum; i <= maximum; i += step) {
-          items.push(toFixed(i, decimalPlaces || 0))
+        step = stepAndDecimalPlaces[0]
+        decimalPlaces = stepAndDecimalPlaces[1]
+
+        minimum = getNumberMinimum(currentObject)
+        maximum = getNumberMaximum(currentObject)
+
+        if (minimum !== undefined && maximum !== undefined && step != 'any') {
+          for (let i = minimum; i <= maximum; i += step) {
+            items.push(toFixed(i, decimalPlaces || 0))
+          }
         }
       }
     }
@@ -79,22 +97,22 @@ export const getCheckboxCustomFields = (
     ...baseInput,
     type: InputTypes.checkbox,
     isSingle: currentObject.type === 'boolean',
-    getItemInputProps: index => {
-      const itemProps: React.ComponentProps<'input'> = { key: '' }
-      // This ternary decides wether to treat the input as an array or not
-      itemProps.name =
+    getItemInputProps: (index) => {
+      const name =
         currentObject.type === 'array'
           ? `${baseInput.pointer}[${index}]`
           : baseInput.pointer
-      itemProps.ref = register(validator)
-      itemProps.type = 'checkbox'
-      itemProps.id = getItemInputId(baseInput.pointer, index, items)
-      itemProps.value = items[index]
 
-      return itemProps
+      return {
+        ...register(name, validator),
+        type: 'checkbox',
+        id: getItemInputId(baseInput.pointer, index, items),
+        value: items[index],
+      }
     },
-    getItemLabelProps: index => {
-      const itemProps: React.ComponentProps<'label'> = {}
+    getItemLabelProps: (index) => {
+      const itemProps: ComponentProps<'label'> = {}
+
       itemProps.id = getItemLabelId(baseInput.pointer, index, items)
       itemProps.htmlFor = getItemInputId(baseInput.pointer, index, items)
 
@@ -104,6 +122,6 @@ export const getCheckboxCustomFields = (
   }
 }
 
-export const useCheckbox: UseCheckboxParameters = path => {
+export const useCheckbox: UseCheckboxParameters = (path) => {
   return getCheckboxCustomFields(useGenericInput(path))
 }

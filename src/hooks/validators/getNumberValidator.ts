@@ -1,13 +1,13 @@
-import { ValidationOptions } from 'react-hook-form'
+import type { RegisterOptions } from 'react-hook-form'
 
 import { getNumberMaximum, getNumberMinimum } from './numberUtilities'
-import { JSONSchemaType } from '../../JSONSchema'
+import type { JSONSchemaType, NumberJSONSchemaType } from '../../JSONSchema'
 import { ErrorTypes } from './types'
 
 export const getNumberValidator = (
   currentObject: JSONSchemaType,
-  baseValidator: ValidationOptions
-): ValidationOptions => {
+  baseValidator: RegisterOptions
+): RegisterOptions => {
   const minimum = getNumberMinimum(currentObject)
   const maximum = getNumberMaximum(currentObject)
 
@@ -15,15 +15,18 @@ export const getNumberValidator = (
     ...baseValidator.validate,
     multipleOf: (value: string) => {
       if (currentObject.type === 'integer' && value) {
+        const numberSchema = currentObject as NumberJSONSchemaType
+        const multipleOf = numberSchema.multipleOf
+
         return (
-          currentObject.multipleOf &&
-          (parseInt(value) % parseInt(currentObject.multipleOf) === 0 ||
-            ErrorTypes.multipleOf)
+          (multipleOf != null &&
+            Number.parseInt(value, 10) % multipleOf === 0) ||
+          ErrorTypes.multipleOf
         )
-      } else {
-        // TODO: implement float checking with epsilon
-        return true
       }
+
+      // TODO: implement float checking with epsilon
+      return true
     },
   }
 

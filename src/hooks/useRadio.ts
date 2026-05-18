@@ -1,11 +1,11 @@
-import React from 'react'
+import type { ComponentProps } from 'react'
 
-import {
+import type {
   UseRadioParameters,
   BasicInputReturnType,
   UseRadioReturnType,
-  InputTypes,
 } from './types'
+import { InputTypes } from './types'
 import {
   getNumberMaximum,
   getNumberMinimum,
@@ -20,7 +20,7 @@ const getItemInputId = (
   index: number,
   items: string[]
 ): string => {
-  return pointer + '-radio-input-' + (items[index] ? items[index] : '')
+  return `${pointer}-radio-input-${items[index] ? items[index] : ''}`
 }
 
 const getItemLabelId = (
@@ -28,7 +28,7 @@ const getItemLabelId = (
   index: number,
   items: string[]
 ): string => {
-  return pointer + '-radio-label-' + (items[index] ? items[index] : '')
+  return `${pointer}-radio-label-${items[index] ? items[index] : ''}`
 }
 
 export const getRadioCustomFields = (
@@ -52,6 +52,7 @@ export const getRadioCustomFields = (
     currentObject.type === 'integer'
   ) {
     const stepAndDecimalPlaces = getNumberStep(currentObject)
+
     step = stepAndDecimalPlaces[0]
     decimalPlaces = stepAndDecimalPlaces[1]
 
@@ -60,7 +61,7 @@ export const getRadioCustomFields = (
 
     if (minimum !== undefined && maximum !== undefined && step != 'any') {
       for (let i = minimum; i <= maximum; i += step) {
-        items.push(toFixed(i, decimalPlaces ? decimalPlaces : 0))
+        items.push(toFixed(i, decimalPlaces || 0))
       }
     }
   } else if (currentObject.type === 'boolean') {
@@ -71,27 +72,26 @@ export const getRadioCustomFields = (
     ...baseInput,
     type: InputTypes.radio,
     getLabelProps: () => {
-      const labelProps: React.ComponentProps<'label'> = {}
-      labelProps.id = baseInput.pointer + '-label'
+      const labelProps: ComponentProps<'label'> = {}
+
+      labelProps.id = `${baseInput.pointer}-label`
       labelProps.htmlFor =
         currentObject.title !== undefined
           ? currentObject.title
           : baseInput.pointer
+
       return labelProps
     },
-    getItemInputProps: index => {
-      const itemProps: React.ComponentProps<'input'> = { key: '' }
-      itemProps.name = baseInput.pointer
-      itemProps.ref = register(validator)
-      itemProps.type = 'radio'
-      itemProps.required = baseInput.isRequired
-      itemProps.id = getItemInputId(baseInput.pointer, index, items)
-      itemProps.value = items[index]
+    getItemInputProps: (index) => ({
+      ...register(baseInput.pointer, validator),
+      type: 'radio',
+      required: baseInput.isRequired,
+      id: getItemInputId(baseInput.pointer, index, items),
+      value: items[index],
+    }),
+    getItemLabelProps: (index) => {
+      const itemProps: ComponentProps<'label'> = {}
 
-      return itemProps
-    },
-    getItemLabelProps: index => {
-      const itemProps: React.ComponentProps<'label'> = {}
       itemProps.id = getItemLabelId(baseInput.pointer, index, items)
       itemProps.htmlFor = getItemInputId(baseInput.pointer, index, items)
 
@@ -101,6 +101,6 @@ export const getRadioCustomFields = (
   }
 }
 
-export const useRadio: UseRadioParameters = pointer => {
+export const useRadio: UseRadioParameters = (pointer) => {
   return getRadioCustomFields(useGenericInput(pointer))
 }

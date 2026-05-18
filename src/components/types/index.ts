@@ -1,17 +1,19 @@
-import React from 'react'
-import {
+import type { BaseSyntheticEvent, HTMLAttributes, PropsWithChildren } from 'react'
+import type {
   DeepPartial,
+  FieldErrors,
   FieldValues,
-  FormContextValues,
   Mode,
+  UseFormReturn,
 } from 'react-hook-form'
 
-import { JSONSchemaType, IDSchemaPair } from '../../JSONSchema'
-import { CustomValidators } from '../../hooks/validators'
+import type { JSONSchemaType, IDSchemaPair } from '../../JSONSchema'
+import type { CustomValidators } from '../../hooks/validators'
 
 export interface JSONFormContextValues<
-  FormValues extends FieldValues = FieldValues
-> extends FormContextValues<FormValues> {
+  FormValues extends FieldValues = FieldValues,
+> extends UseFormReturn<FormValues> {
+  errors: FieldErrors<FormValues>
   schema: JSONSchemaType
   idMap: IDSchemaPair
   customValidators?: CustomValidators
@@ -19,20 +21,24 @@ export interface JSONFormContextValues<
 
 export type OnSubmitParameters = {
   data: JSONSchemaType
-  event: React.BaseSyntheticEvent | undefined
+  event: BaseSyntheticEvent | undefined
   methods: JSONFormContextValues
 }
 export type OnSubmitType = (props: OnSubmitParameters) => void | Promise<void>
 
-export type FormContextProps<FormValues extends FieldValues = FieldValues> = {
-  formProps?: Omit<React.HTMLAttributes<HTMLFormElement>, 'onSubmit'>
-  validationMode?: Mode
-  revalidateMode?: Mode
-  submitFocusError?: boolean
-  onChange?: (data: JSONSchemaType) => void
-  onSubmit?: OnSubmitType
-  noNativeValidate?: boolean
-  customValidators?: CustomValidators
-  schema: JSONSchemaType
-  defaultValues?: DeepPartial<FormValues> | FormValues
-}
+/** Matches `useForm` `reValidateMode` (excludes `onTouched` and `all`). */
+export type RevalidateMode = Exclude<Mode, 'onTouched' | 'all'>
+
+export type FormContextProps<FormValues extends FieldValues = FieldValues> =
+  PropsWithChildren<{
+    formProps?: Omit<HTMLAttributes<HTMLFormElement>, 'onSubmit'>
+    validationMode?: Mode
+    revalidateMode?: RevalidateMode
+    submitFocusError?: boolean
+    onChange?: (data: JSONSchemaType) => void
+    onSubmit?: OnSubmitType
+    noNativeValidate?: boolean
+    customValidators?: CustomValidators
+    schema: JSONSchemaType
+    defaultValues?: DeepPartial<FormValues> | FormValues
+  }>

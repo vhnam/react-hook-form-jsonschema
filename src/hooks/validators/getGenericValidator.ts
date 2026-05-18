@@ -1,13 +1,10 @@
-import { ValidationOptions } from 'react-hook-form'
+import type { RegisterOptions } from 'react-hook-form'
 
-import {
-  ErrorTypes,
-  CustomValidators,
-  CustomValidatorReturnValue,
-} from './types'
+import type { CustomValidators, CustomValidatorReturnValue } from './types'
+import { ErrorTypes } from './types'
 import { getNumberValidator } from './getNumberValidator'
 import { getStringValidator } from './getStringValidator'
-import { JSONSubSchemaInfo } from '../../JSONSchema'
+import type { JSONSubSchemaInfo } from '../../JSONSchema'
 
 type GetCustomValidatorReturnType = Record<
   string,
@@ -23,6 +20,7 @@ function getCustomValidator(
       acc[key] = (value: string) => {
         return customValidators[key](value, context)
       }
+
       return acc
     },
     {}
@@ -32,14 +30,15 @@ function getCustomValidator(
 export const getValidator = (
   context: JSONSubSchemaInfo,
   customValidators: CustomValidators
-): ValidationOptions => {
+): RegisterOptions => {
   const { JSONSchema, isRequired } = context
 
   // The use of this variable prevents a strange undocumented behaviour of react-hook-form
   // that is it fails to validate if the `validate` field exists but is empty.
   const hasValidate =
     Object.keys(customValidators).length > 0 || JSONSchema.enum
-  const validator: ValidationOptions = {
+
+  const validator: RegisterOptions = {
     ...(hasValidate
       ? {
           validate: {
@@ -57,6 +56,7 @@ export const getValidator = (
                         return true
                       }
                     }
+
                     return ErrorTypes.notInEnum
                   },
                 }
@@ -72,12 +72,16 @@ export const getValidator = (
 
   switch (JSONSchema.type) {
     case 'integer':
+
     case 'number':
       return getNumberValidator(JSONSchema, validator)
+
     case 'string':
       return getStringValidator(JSONSchema, validator)
+
     case 'boolean':
       return validator
+
     default:
       return {}
   }

@@ -1,5 +1,4 @@
-import React from 'react'
-import { render } from '@vtex/test-tools/react'
+import { render } from '@testing-library/react'
 
 import { FormContext } from '../../components'
 import mockObjectSchema from '../__mocks__/mockSchemaWithRefs'

@@ -1,11 +1,11 @@
-import React from 'react'
+import type { ComponentProps } from 'react'
 
-import {
+import type {
   UseSelectParameters,
   BasicInputReturnType,
   UseSelectReturnType,
-  InputTypes,
 } from './types'
+import { InputTypes } from './types'
 import {
   getNumberMaximum,
   getNumberMinimum,
@@ -16,7 +16,7 @@ import { useGenericInput } from './useGenericInput'
 import { getEnumAsStringArray } from './validators/getEnum'
 
 const getSelectId = (pointer: string): string => {
-  return pointer + '-select'
+  return `${pointer}-select`
 }
 
 const getOptionId = (
@@ -24,7 +24,7 @@ const getOptionId = (
   index: number,
   items: string[]
 ): string => {
-  return pointer + '-select-option-' + (items[index] ? items[index] : '')
+  return `${pointer}-select-option-${items[index] ? items[index] : ''}`
 }
 
 export const getSelectCustomFields = (
@@ -48,6 +48,7 @@ export const getSelectCustomFields = (
     currentObject.type === 'integer'
   ) {
     const stepAndDecimalPlaces = getNumberStep(currentObject)
+
     step = stepAndDecimalPlaces[0]
     decimalPlaces = stepAndDecimalPlaces[1]
 
@@ -56,7 +57,7 @@ export const getSelectCustomFields = (
 
     if (minimum !== undefined && maximum !== undefined && step != 'any') {
       for (let i = minimum; i <= maximum; i += step) {
-        items.push(toFixed(i, decimalPlaces ? decimalPlaces : 0))
+        items.push(toFixed(i, decimalPlaces || 0))
       }
     }
   } else if (currentObject.type === 'boolean') {
@@ -68,23 +69,21 @@ export const getSelectCustomFields = (
     type: InputTypes.select,
     validator,
     getLabelProps: () => {
-      const labelProps: React.ComponentProps<'label'> = {}
-      labelProps.id = baseInput.pointer + '-label'
+      const labelProps: ComponentProps<'label'> = {}
+
+      labelProps.id = `${baseInput.pointer}-label`
       labelProps.htmlFor = getSelectId(baseInput.pointer)
 
       return labelProps
     },
-    getSelectProps: () => {
-      const itemProps: React.ComponentProps<'select'> = {}
-      itemProps.name = baseInput.pointer
-      itemProps.ref = register(validator)
-      itemProps.required = baseInput.isRequired
-      itemProps.id = getSelectId(baseInput.pointer)
+    getSelectProps: () => ({
+      ...register(baseInput.pointer, validator),
+      required: baseInput.isRequired,
+      id: getSelectId(baseInput.pointer),
+    }),
+    getItemOptionProps: (index) => {
+      const itemProps: ComponentProps<'option'> = {}
 
-      return itemProps
-    },
-    getItemOptionProps: index => {
-      const itemProps: React.ComponentProps<'option'> = {}
       itemProps.id = getOptionId(baseInput.pointer, index, items)
       itemProps.value = items[index]
 
@@ -94,6 +93,6 @@ export const getSelectCustomFields = (
   }
 }
 
-export const useSelect: UseSelectParameters = pointer => {
+export const useSelect: UseSelectParameters = (pointer) => {
   return getSelectCustomFields(useGenericInput(pointer))
 }

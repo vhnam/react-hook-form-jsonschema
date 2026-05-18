@@ -1,12 +1,10 @@
-import { FieldError } from 'react-hook-form'
+import type { FieldError, FieldValues, RegisterOptions } from 'react-hook-form'
 
-import {
-  GenericInputParameters,
-  BasicInputReturnType,
-  InputTypes,
-} from './types'
-import { useFormContext, JSONFormContextValues } from '../components'
-import { JSONSubSchemaInfo } from '../JSONSchema'
+import type { GenericInputParameters, BasicInputReturnType } from './types'
+import { InputTypes } from './types'
+import type { JSONFormContextValues } from '../components'
+import { useFormContext } from '../components'
+import type { JSONSubSchemaInfo } from '../JSONSchema'
 import { useAnnotatedSchemaFromPointer } from '../JSONSchema/path-handler'
 import { getObjectFromForm } from '../JSONSchema/logic'
 import {
@@ -30,19 +28,25 @@ export const getGenericInput = (
 
   if (JSONSchema.type === 'number' || JSONSchema.type === 'integer') {
     const stepAndDecimalPlaces = getNumberStep(JSONSchema)
+
     step = stepAndDecimalPlaces[0]
 
     minimum = getNumberMinimum(JSONSchema)
     maximum = getNumberMaximum(JSONSchema)
   }
 
+  const validator: RegisterOptions = getValidator(
+    subSchemaInfo,
+    formContext.customValidators ?? {}
+  )
+
   return {
     name: objectName,
-    pointer: pointer,
-    isRequired: isRequired,
-    formContext: formContext,
+    pointer,
+    isRequired,
+    formContext,
     type: InputTypes.generic,
-    validator: getValidator(subSchemaInfo, formContext.customValidators ?? {}),
+    validator,
     getError: () =>
       getError(
         formContext.errors[pointer]
@@ -57,15 +61,15 @@ export const getGenericInput = (
         step
       ),
     getObject: () => JSONSchema,
-    getCurrentValue: () => {
-      return formContext.getValues()[pointer]
-    },
+    getCurrentValue: (): FieldValues =>
+      formContext.getValues(pointer) as FieldValues,
   }
 }
 
-export const useGenericInput: GenericInputParameters = pointer => {
+export const useGenericInput: GenericInputParameters = (pointer) => {
   const formContext = useFormContext()
   const data = getObjectFromForm(formContext.schema, formContext.getValues())
   const subSchemaInfo = useAnnotatedSchemaFromPointer(pointer, data)
+
   return getGenericInput(formContext, subSchemaInfo, pointer)
 }

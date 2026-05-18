@@ -1,8 +1,8 @@
-import React from 'react'
-import { render, wait } from '@vtex/test-tools/react'
+import { render, waitFor } from '@testing-library/react'
 
 import { FormContext } from '../../components'
-import { UISchemaType, UITypes } from '../../hooks'
+import type { UISchemaType } from '../../hooks'
+import { UITypes } from '../../hooks'
 import mockObjectSchema from '../../hooks/__mocks__/mockSchema'
 import { MockObject } from '../../__mocks__/mockObjectComponent'
 import { deepFreeze } from '../__mocks__/deepFreeze'
@@ -17,14 +17,10 @@ const mockUISchema: UISchemaType = {
 }
 
 const frozenSchema = deepFreeze(mockObjectSchema)
+
 test('should render all child properties of the schema', async () => {
-  const { getByText } = render(
-    <FormContext
-      schema={frozenSchema}
-      onSubmit={() => {
-        return
-      }}
-    >
+  const { getByText, getAllByText } = render(
+    <FormContext schema={frozenSchema} onSubmit={() => {}}>
       <MockObject pointer="#" />
       <input type="submit" value="Submit" />
     </FormContext>
@@ -38,18 +34,15 @@ test('should render all child properties of the schema', async () => {
 
   getByText('Submit').click()
 
-  await wait(() => expect(getByText('This is an error!')).toBeDefined())
+  await waitFor(() => {
+    expect(getAllByText('This is an error!').length).toBeGreaterThan(0)
+  })
 })
 
 test('should raise error', async () => {
   const { getByText } = render(
     // esling-disable-next-line no-console
-    <FormContext
-      schema={frozenSchema}
-      onSubmit={() => {
-        return
-      }}
-    >
+    <FormContext schema={frozenSchema} onSubmit={() => {}}>
       <MockObject pointer="#/properties/errorTest" />
       <input type="submit" value="Submit" />
     </FormContext>
@@ -57,7 +50,7 @@ test('should raise error', async () => {
 
   getByText('Submit').click()
 
-  await wait(() => expect(getByText('This is an error!')).toBeDefined())
+  await waitFor(() => expect(getByText('This is an error!')).toBeDefined())
 })
 
 test('ui schema should render number and input as select', async () => {

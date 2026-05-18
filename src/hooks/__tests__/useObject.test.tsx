@@ -1,10 +1,10 @@
-import React from 'react'
-import { render, wait } from '@vtex/test-tools/react'
+import { render, waitFor } from '@testing-library/react'
 
 import { MockObject } from '../../__mocks__/mockObjectComponent'
 import { FormContext } from '../../components'
 import mockObjectSchema from '../__mocks__/mockSchema'
-import { UISchemaType, UITypes } from '../types'
+import type { UISchemaType } from '../types'
+import { UITypes } from '../types'
 
 const mockUISchema: UISchemaType = {
   type: UITypes.default,
@@ -35,12 +35,7 @@ test('should render all child properties of the schema', () => {
 test('should raise error', async () => {
   const { getByText } = render(
     // esling-disable-next-line no-console
-    <FormContext
-      schema={mockObjectSchema}
-      onSubmit={() => {
-        return
-      }}
-    >
+    <FormContext schema={mockObjectSchema} onSubmit={() => {}}>
       <MockObject pointer="#/properties/errorTest" />
       <input type="submit" value="Submit" />
     </FormContext>
@@ -48,7 +43,7 @@ test('should raise error', async () => {
 
   getByText('Submit').click()
 
-  await wait(() => expect(getByText('This is an error!')).toBeDefined())
+  await waitFor(() => expect(getByText('This is an error!')).toBeDefined())
 })
 
 test('ui schema should render number and input as select', async () => {

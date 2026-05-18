@@ -29,6 +29,7 @@ test('should return an object that matches the schema', () => {
       },
     },
   }
+
   const mockData = {
     '#/properties/firstName': 'Jane',
     '#/properties/lastName': 'Doe',

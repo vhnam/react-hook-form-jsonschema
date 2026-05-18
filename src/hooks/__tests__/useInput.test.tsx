@@ -1,11 +1,11 @@
-import React, { FC } from 'react'
-import { renderHook } from '@testing-library/react-hooks'
+import type { PropsWithChildren } from 'react'
+import { renderHook } from '@testing-library/react'
 
 import { FormContext } from '../../components'
 import { useInput } from '../useInput'
 import mockTextSchema from '../__mocks__/mockTextSchema'
 
-const Wrapper: FC = ({ children }) => {
+const Wrapper = ({ children }: PropsWithChildren) => {
   return <FormContext schema={mockTextSchema}>{children}</FormContext>
 }
 
@@ -15,6 +15,7 @@ test('useInput type date', () => {
   })
 
   const { type } = result.current.getInputProps()
+
   expect(type).toBe('date')
 })
 
@@ -27,6 +28,7 @@ test('useInput type date-time', () => {
   )
 
   const { type } = result.current.getInputProps()
+
   expect(type).toBe('datetime-local')
 })
 
@@ -39,6 +41,7 @@ test('useInput type email', () => {
   )
 
   const { type } = result.current.getInputProps()
+
   expect(type).toBe('email')
 })
 
@@ -51,6 +54,7 @@ test('useInput type hostname', () => {
   )
 
   const { type } = result.current.getInputProps()
+
   expect(type).toBe('url')
 })
 
@@ -60,5 +64,6 @@ test('useInput type uri', () => {
   })
 
   const { type } = result.current.getInputProps()
+
   expect(type).toBe('url')
 })

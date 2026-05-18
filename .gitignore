@@ -3,3 +3,4 @@ node_modules
 *.swp
 *.DS_STORE
 output/*
+.pnpm-store

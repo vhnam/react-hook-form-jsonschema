@@ -1,9 +1,13 @@
-import { JSONSchemaType, JSONSchemaBaseInstanceTypes } from '../../JSONSchema'
+import type {
+  JSONSchemaType,
+  JSONSchemaBaseInstanceTypes,
+} from '../../JSONSchema'
 
 const mapEnumItemsToString = (obj: JSONSchemaBaseInstanceTypes): string => {
   if (obj) {
     return obj.toString()
   }
+
   return ''
 }
 

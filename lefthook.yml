@@ -1,0 +1,19 @@
+# https://lefthook.dev/configuration/
+
+pre-commit:
+  parallel: true
+  jobs:
+    - name: eslint
+      glob: "**/*.{ts,tsx,mjs}"
+      exclude:
+        - example/**
+        - output/**
+        - dist/**
+        - coverage/**
+      run: pnpm eslint {staged_files}
+      staged_files: true
+
+pre-push:
+  jobs:
+    - name: test
+      run: pnpm test

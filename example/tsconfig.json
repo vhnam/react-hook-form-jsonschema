@@ -5,15 +5,12 @@
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx",
     "moduleResolution": "bundler",
+    "isolatedModules": true,
     "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
     "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noEmitOnError": true,
-    "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
-    "sourceMap": true
+    "noEmit": true,
+    "resolveJsonModule": true
   },
-  "exclude": ["node_modules", "output", "example"]
+  "include": ["src"]
 }

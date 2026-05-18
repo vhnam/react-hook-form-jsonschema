@@ -1,11 +1,12 @@
-import React from 'react'
+import type { ComponentProps } from 'react'
 
-import {
+import type { NumberJSONSchemaType, StringJSONSchemaType } from '../JSONSchema'
+import type {
   UseRawInputParameters,
   BasicInputReturnType,
   UseRawInputReturnType,
-  InputTypes,
 } from './types'
+import { InputTypes } from './types'
 import {
   getNumberMaximum,
   getNumberMinimum,
@@ -14,11 +15,11 @@ import {
 } from './validators'
 
 const getInputId = (pointer: string, inputType: string): string => {
-  return pointer + '-' + inputType + '-input'
+  return `${pointer}-${inputType}-input`
 }
 
 const getLabelId = (pointer: string, inputType: string): string => {
-  return pointer + '-' + inputType + '-label'
+  return `${pointer}-${inputType}-label`
 }
 
 export const getRawInputCustomFields = (
@@ -35,47 +36,50 @@ export const getRawInputCustomFields = (
   let step: number | 'any'
   let decimalPlaces: number | undefined
 
-  const itemProps: React.ComponentProps<'input'> = { key: '' }
+  const itemProps: ComponentProps<'input'> = {}
+
   if (currentObject.type === 'string') {
-    itemProps.pattern = currentObject.pattern
-    itemProps.minLength = currentObject.minLength
-    itemProps.maxLength = currentObject.maxLength
+    const stringSchema = currentObject as StringJSONSchemaType
+
+    itemProps.pattern = stringSchema.pattern
+    itemProps.minLength = stringSchema.minLength
+    itemProps.maxLength = stringSchema.maxLength
   } else if (
     currentObject.type === 'number' ||
     currentObject.type === 'integer'
   ) {
-    const stepAndDecimalPlaces = getNumberStep(currentObject)
+    const numberSchema = currentObject as NumberJSONSchemaType
+    const stepAndDecimalPlaces = getNumberStep(numberSchema)
+
     step = stepAndDecimalPlaces[0]
     decimalPlaces = stepAndDecimalPlaces[1]
 
-    minimum = getNumberMinimum(currentObject)
-    maximum = getNumberMaximum(currentObject)
+    minimum = getNumberMinimum(numberSchema)
+    maximum = getNumberMaximum(numberSchema)
 
     itemProps.min = `${minimum}`
     itemProps.max = `${maximum}`
-    itemProps.step =
-      step === 'any' ? 'any' : toFixed(step, decimalPlaces ? decimalPlaces : 0)
+    itemProps.step = step === 'any' ? 'any' : toFixed(step, decimalPlaces || 0)
   }
 
   return {
     ...baseInput,
     type: InputTypes.input,
     getLabelProps: () => {
-      const itemProps: React.ComponentProps<'label'> = {}
+      const itemProps: ComponentProps<'label'> = {}
+
       itemProps.id = getLabelId(baseInput.pointer, inputType)
       itemProps.htmlFor = getInputId(baseInput.pointer, inputType)
 
       return itemProps
     },
-    getInputProps: () => {
-      itemProps.name = baseInput.pointer
-      itemProps.ref = register(validator)
-      itemProps.type = inputType
-      itemProps.required = baseInput.isRequired
-      itemProps.id = getInputId(baseInput.pointer, inputType)
-
-      return itemProps
-    },
+    getInputProps: () => ({
+        ...itemProps,
+        ...register(baseInput.pointer, validator),
+        type: inputType,
+        required: baseInput.isRequired,
+        id: getInputId(baseInput.pointer, inputType),
+      }),
   }
 }
 

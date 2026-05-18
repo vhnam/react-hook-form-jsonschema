@@ -1,4 +1,4 @@
-import {
+import type {
   UseInputParameters,
   BasicInputReturnType,
   UseRawInputReturnType,
@@ -12,20 +12,25 @@ export const getInputCustomFields = (
   const currentObject = baseObject.getObject()
 
   let inputType = 'text'
+
   if (currentObject.type === 'string') {
     switch (currentObject.format) {
       case 'date':
         inputType = 'date'
         break
+
       case 'date-time':
         inputType = 'datetime-local'
         break
+
       case 'email':
         inputType = 'email'
         break
+
       case 'hostname':
         inputType = 'url'
         break
+
       case 'uri':
         inputType = 'url'
         break
@@ -40,6 +45,6 @@ export const getInputCustomFields = (
   return getRawInputCustomFields(baseObject, inputType)
 }
 
-export const useInput: UseInputParameters = pointer => {
+export const useInput: UseInputParameters = (pointer) => {
   return getInputCustomFields(useGenericInput(pointer))
 }

@@ -1,7 +1,7 @@
 export const JSONSchemaRootPointer = '#'
 
 export const concatFormPointer = (path: string, newNode: string): string => {
-  return path + '/' + newNode
+  return `${path}/${newNode}`
 }
 
 export const getSplitPointer = (pointer: string): string[] => {

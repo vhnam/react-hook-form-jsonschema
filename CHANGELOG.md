@@ -7,7 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-05-19
+
+### Added
+
+- Export `useFormContext` for custom components that need the form context.
+- `getCurrentValue()` on field hooks to read the current react-hook-form value for a pointer.
+- `errors` on `JSONFormContextValues` so consumers can react to validation state.
+- Example app rewritten with Vite and TypeScript (`example/`).
+
+### Changed
+
+- **BREAKING**: Peer dependencies now require React 18 and react-hook-form v7 (previously React 16 with react-hook-form v4 bundled as a dependency).
+- **BREAKING**: `noNativeValidate` defaults to `true`; native browser validation is off unless you set `noNativeValidate={false}`.
+- **BREAKING**: `onSubmit` handler is no longer `async`-wrapped by the library; return a `Promise` from your callback if you need async submit.
+- `onChange` uses a `watch` subscription (react-hook-form v7) instead of reading values during render.
+- Library build uses Vite; tests use Jest and Testing Library instead of `@vtex/test-tools`.
+- TypeScript 5.x, ESLint 9 (flat config), and Prettier 3 for development.
+- README updated for the current API, tooling, and JSON Schema resource links.
+- `$ref` resolution and schema traversal refactored to avoid mutating input schema objects.
+
+### Fixed
+
+- `FormContext` re-renders after validation so error UI updates reliably with react-hook-form v7.
+- `onChange` is only subscribed when the prop is provided.
+- Frozen input schemas remain immutable when resolving references.
+
+### Removed
+
+- Husky git hooks (maintainers can use Lefthook via `lefthook.yml`).
+
 ## [0.2.0] - 2021-08-03
+
+### Added
+
+- `useInput` maps string `format` values `date` and `date-time` to HTML `date` and `datetime-local` input types.
 
 ## [0.2.0-beta.13] - 2020-03-26
 

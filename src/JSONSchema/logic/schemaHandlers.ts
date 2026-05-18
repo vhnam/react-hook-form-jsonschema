@@ -1,15 +1,29 @@
-import { JSONSchemaType, JSONSubSchemaInfo } from '../types'
-import { JSONFormContextValues } from '../../components'
+import type { JSONSchemaType, JSONSubSchemaInfo } from '../types'
+import type { JSONFormContextValues } from '../../components'
 import {
   concatFormPointer,
   JSONSchemaRootPointer,
   getSplitPointer,
 } from './pathUtils'
+import {
+  asFormDataNode,
+  asObjectSchema,
+  getSchemaNode,
+  getSchemaProperty,
+  isJSONSchemaObject,
+} from './schemaAccess'
 
 const parsers: Record<string, (data: string) => number | boolean> = {
-  integer: (data: string): number => parseInt(data),
+  integer: (data: string): number => parseInt(data, 10),
   number: (data: string): number => parseFloat(data),
   boolean: (data: string): boolean => data === 'true',
+}
+
+interface FormReducerContext {
+  currentJSON: JSONSchemaType
+  currentSubSchema: JSONSchemaType | undefined
+  insideProperties: boolean
+  targetData: unknown
 }
 
 export const getObjectFromForm = (
@@ -20,14 +34,16 @@ export const getObjectFromForm = (
     .sort()
     .reduce((objectFromData: JSONSchemaType, key: string) => {
       const splitPointer = getSplitPointer(key)
-      if (!splitPointer || !data[key]) {
+      const fieldValue: unknown = getSchemaNode(data, key)
+
+      if (!splitPointer || fieldValue === undefined || fieldValue === null) {
         return objectFromData
       }
 
       splitPointer.reduce(
-        (currentContext, node: string, index: number, src: string[]) => {
+        (currentContext: FormReducerContext, node: string, index: number, src: string[]) => {
           currentContext.currentSubSchema = currentContext.currentSubSchema
-            ? currentContext.currentSubSchema[node]
+            ? getSchemaProperty(currentContext.currentSubSchema, node)
             : undefined
 
           if (node === 'properties' && !currentContext.insideProperties) {
@@ -35,19 +51,31 @@ export const getObjectFromForm = (
           }
 
           if (index === src.length - 1 && currentContext.currentSubSchema) {
-            currentContext.currentJSON[node] =
-              currentContext.currentSubSchema.type &&
-              parsers[currentContext.currentSubSchema.type]
-                ? parsers[currentContext.currentSubSchema.type](data[key])
-                : currentContext.targetData ?? {}
+            const schemaType = currentContext.currentSubSchema.type
+            let parsedValue: unknown = currentContext.targetData ?? {}
+
+            if (
+              typeof schemaType === 'string' &&
+              schemaType in parsers &&
+              (typeof fieldValue === 'string' ||
+                typeof fieldValue === 'number' ||
+                typeof fieldValue === 'boolean')
+            ) {
+              parsedValue = parsers[schemaType](String(fieldValue))
+            }
+
+            Reflect.set(currentContext.currentJSON, node, parsedValue)
           } else if (
-            !currentContext.currentJSON[node] &&
+            !getSchemaNode(currentContext.currentJSON, node) &&
             currentContext.currentSubSchema
           ) {
-            currentContext.currentJSON[node] = {}
+            Reflect.set(currentContext.currentJSON, node, {})
           }
 
-          currentContext.currentJSON = currentContext.currentJSON[node]
+          const nextJson = getSchemaNode(currentContext.currentJSON, node)
+          currentContext.currentJSON = isJSONSchemaObject(nextJson)
+            ? nextJson
+            : {}
 
           return { ...currentContext, insideProperties: false }
         },
@@ -55,16 +83,17 @@ export const getObjectFromForm = (
           currentJSON: objectFromData,
           currentSubSchema: originalSchema,
           insideProperties: false,
-          targetData: data[key],
+          targetData: fieldValue,
         }
       )
+
       return objectFromData
     }, {})
 }
 
 interface ReducerSubSchemaInfo {
-  JSONSchema: JSONSchemaType
-  currentData: JSONSchemaType
+  JSONSchema: JSONSchemaType | undefined
+  currentData: JSONSchemaType | undefined
   invalidPointer: boolean
   isRequired: boolean
   fatherExists: boolean
@@ -85,36 +114,41 @@ export const getAnnotatedSchemaFromPointer = (
   const info = getSplitPointer(pointer).reduce(
     (currentInfo: ReducerSubSchemaInfo, node: string) => {
       const { JSONSchema, currentData } = currentInfo
+      const objectSchema = JSONSchema ? asObjectSchema(JSONSchema) : undefined
 
-      if (
-        !(JSONSchema && JSONSchema.type === 'object') &&
-        !currentInfo.insideProperties
-      ) {
+      if (!objectSchema && !currentInfo.insideProperties) {
         return {
           ...currentInfo,
           JSONSchema: undefined,
           invalidPointer: true,
         }
-      } else if (node === 'properties' && !currentInfo.insideProperties) {
+      }
+
+      if (node === 'properties' && !currentInfo.insideProperties && objectSchema) {
         const fatherIsRequired = currentInfo.isRequired
 
         return {
           ...currentInfo,
-          JSONSchema: JSONSchema.properties,
+          JSONSchema: objectSchema.properties ?? {},
           fatherIsRequired,
           pointer: concatFormPointer(currentInfo.pointer, node),
           insideProperties: true,
-          currentRequiredField: JSONSchema.required ?? [],
+          currentRequiredField: objectSchema.required ?? [],
         }
       }
 
-      const fatherExists = currentData ? true : false
-      const newCurrentData = currentData ? currentData[node] : currentData
+      const fatherExists = !!currentData
+      const newCurrentData = asFormDataNode(
+        currentData ? getSchemaNode(currentData, node) : undefined
+      )
       const isRequired = currentInfo.currentRequiredField.indexOf(node) > -1
+      const nextSchema = JSONSchema
+        ? getSchemaProperty(JSONSchema, node)
+        : undefined
 
       return {
         ...currentInfo,
-        JSONSchema: JSONSchema[node],
+        JSONSchema: nextSchema,
         currentData: newCurrentData,
         fatherExists,
         isRequired,
@@ -134,12 +168,12 @@ export const getAnnotatedSchemaFromPointer = (
       objectName: '',
       pointer: JSONSchemaRootPointer,
       insideProperties: false,
-      currentRequiredField: schema.required ?? [],
+      currentRequiredField: asObjectSchema(schema)?.required ?? [],
     }
   )
 
   return {
-    JSONSchema: info.JSONSchema,
+    JSONSchema: info.JSONSchema as JSONSchemaType,
     invalidPointer: info.invalidPointer,
     isRequired:
       (info.fatherIsRequired && info.isRequired) ||

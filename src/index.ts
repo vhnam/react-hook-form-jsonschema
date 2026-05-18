@@ -1,8 +1,8 @@
 export { Controller } from 'react-hook-form'
-export * from 'react-hook-form/dist/types'
+export type * from 'react-hook-form'
 
-export {
-  FormContext,
+export { FormContext } from './components'
+export type {
   FormContextProps,
   JSONFormContextValues,
   OnSubmitParameters,
@@ -13,8 +13,5 @@ export * from './hooks'
 
 export * from './JSONSchema'
 
-export {
-  ErrorMessage,
-  ErrorMessageValues,
-  ErrorTypes,
-} from './hooks/validators/types'
+export { ErrorTypes } from './hooks/validators/types'
+export type { ErrorMessage, ErrorMessageValues } from './hooks/validators/types'

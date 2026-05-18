@@ -1,12 +1,11 @@
-import React, { FC } from 'react'
-import { render, wait, fireEvent } from '@vtex/test-tools/react'
+import { render, waitFor, fireEvent } from '@testing-library/react'
 
 import { useRawInput } from '../useRawInput'
 import { FormContext } from '../../components'
 import { useGenericInput } from '../useGenericInput'
 import mockRawFormSchema from '../__mocks__/mockTextSchema'
 
-const MockRawForm: FC<{ pointer: string }> = props => {
+const MockRawForm = (props: { pointer: string }) => {
   const methods = useRawInput(useGenericInput(props.pointer), 'text')
 
   return (
@@ -20,12 +19,7 @@ const MockRawForm: FC<{ pointer: string }> = props => {
 
 test('should have string enum items', () => {
   const { getByText, container } = render(
-    <FormContext
-      schema={mockRawFormSchema}
-      onSubmit={() => {
-        return
-      }}
-    >
+    <FormContext schema={mockRawFormSchema} onSubmit={() => {}}>
       <MockRawForm pointer="#/properties/stringTest" />
       <input type="submit" value="Submit" />
     </FormContext>
@@ -38,12 +32,7 @@ test('should have string enum items', () => {
 
 test('should have all integers in interval', () => {
   const { getByText, container } = render(
-    <FormContext
-      schema={mockRawFormSchema}
-      onSubmit={() => {
-        return
-      }}
-    >
+    <FormContext schema={mockRawFormSchema} onSubmit={() => {}}>
       <MockRawForm pointer="#/properties/integerTest" />
       <input type="submit" value="Submit" />
     </FormContext>
@@ -68,12 +57,7 @@ test('should have all floats in interval, separated by step', () => {
 
 test('should raise error', async () => {
   const { getByLabelText, getByText } = render(
-    <FormContext
-      schema={mockRawFormSchema}
-      onSubmit={() => {
-        return
-      }}
-    >
+    <FormContext schema={mockRawFormSchema} onSubmit={() => {}}>
       <MockRawForm pointer="#/properties/errorTest" />
       <input type="submit" value="Submit" />
     </FormContext>
@@ -82,7 +66,7 @@ test('should raise error', async () => {
   getByText('Submit').click()
   fireEvent.change(getByLabelText('errorTest'), { target: { value: 'a' } })
 
-  await wait(() => {
+  await waitFor(() => {
     expect(getByText('This is an error!')).toBeDefined()
   })
 })
