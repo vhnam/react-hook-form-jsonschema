@@ -1,5 +1,10 @@
-import type { ArrayJSONSchemaType, JSONSchemaType, JSONSubSchemaInfo } from '../types'
+import type {
+  ArrayJSONSchemaType,
+  JSONSchemaType,
+  JSONSubSchemaInfo,
+} from '../types'
 import type { JSONFormContextValues } from '../../components'
+import { isMultiSelectArray } from '../../hooks/arrayUtils'
 import {
   concatFormPointer,
   JSONSchemaRootPointer,
@@ -15,6 +20,31 @@ import {
 } from './schemaAccess'
 
 const isArrayIndex = (node: string): boolean => /^\d+$/.test(node)
+
+const compactMultiSelectArrayValue = (value: unknown[]): unknown[] =>
+  value.filter(
+    (entry) =>
+      entry !== false &&
+      entry !== undefined &&
+      entry !== null &&
+      entry !== ''
+  )
+
+const maybeCompactMultiSelectValue = (
+  arraySchema: ArrayJSONSchemaType | undefined,
+  value: unknown
+): unknown => {
+  if (
+    arraySchema?.type === 'array' &&
+    arraySchema.uniqueItems === true &&
+    isMultiSelectArray(arraySchema) &&
+    Array.isArray(value)
+  ) {
+    return compactMultiSelectArrayValue(value)
+  }
+
+  return value
+}
 
 const parsers: Record<string, (data: string) => number | boolean> = {
   integer: (data: string): number => parseInt(data, 10),
@@ -44,9 +74,18 @@ export const getObjectFromForm = (
       }
 
       splitPointer.reduce(
-        (currentContext: FormReducerContext, node: string, index: number, src: string[]) => {
-          if (isArrayIndex(node) && currentContext.currentSubSchema?.type === 'array') {
-            const arraySchema = currentContext.currentSubSchema as ArrayJSONSchemaType
+        (
+          currentContext: FormReducerContext,
+          node: string,
+          index: number,
+          src: string[]
+        ) => {
+          if (
+            isArrayIndex(node) &&
+            currentContext.currentSubSchema?.type === 'array'
+          ) {
+            const arraySchema =
+              currentContext.currentSubSchema as ArrayJSONSchemaType
             const itemIndex = parseInt(node, 10)
             const itemsSchema = getItemsSchemaForIndex(arraySchema, itemIndex)
 
@@ -56,7 +95,10 @@ export const getObjectFromForm = (
 
             const arrayTarget = currentContext.currentJSON as unknown[]
 
-            if (Array.isArray(arrayTarget) && arrayTarget[itemIndex] === undefined) {
+            if (
+              Array.isArray(arrayTarget) &&
+              arrayTarget[itemIndex] === undefined
+            ) {
               const initialValue =
                 itemsSchema?.type === 'array'
                   ? []
@@ -81,8 +123,11 @@ export const getObjectFromForm = (
           if (index === src.length - 1) {
             const arrayItemsSchema =
               currentContext.currentSubSchema?.type === 'array'
-                ? (currentContext.currentSubSchema as { items?: { type?: string } })
-                    .items
+                ? (
+                    currentContext.currentSubSchema as {
+                      items?: { type?: string }
+                    }
+                  ).items
                 : undefined
             const itemType =
               arrayItemsSchema &&
@@ -136,7 +181,16 @@ export const getObjectFromForm = (
                 }
               }
             } else if (currentContext.currentSubSchema) {
-              Reflect.set(currentContext.currentJSON, node, parsedValue)
+              const arraySchema =
+                currentContext.currentSubSchema.type === 'array'
+                  ? (currentContext.currentSubSchema as ArrayJSONSchemaType)
+                  : undefined
+
+              Reflect.set(
+                currentContext.currentJSON,
+                node,
+                maybeCompactMultiSelectValue(arraySchema, parsedValue)
+              )
             }
           } else if (
             !getSchemaNode(currentContext.currentJSON, node) &&
@@ -148,7 +202,8 @@ export const getObjectFromForm = (
               node
             )
             const initialValue =
-              childSchema?.type === 'array' || isArrayIndex(src[index + 1] ?? '')
+              childSchema?.type === 'array' ||
+              isArrayIndex(src[index + 1] ?? '')
                 ? []
                 : {}
 
@@ -234,7 +289,11 @@ export const getAnnotatedSchemaFromPointer = (
         }
       }
 
-      if (node === 'properties' && !currentInfo.insideProperties && objectSchema) {
+      if (
+        node === 'properties' &&
+        !currentInfo.insideProperties &&
+        objectSchema
+      ) {
         const fatherIsRequired = currentInfo.isRequired
 
         return {

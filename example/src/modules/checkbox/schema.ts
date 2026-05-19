@@ -21,5 +21,14 @@ export const schema = {
         enum: ['reading', 'gaming', 'cooking', 'sports'],
       },
     },
+    instruments: {
+      type: 'array',
+      title: 'Instruments',
+      uniqueItems: false,
+      items: {
+        type: 'string',
+        enum: ['piano', 'guitar', 'violin', 'drums'],
+      },
+    },
   },
 } satisfies ObjectJSONSchemaType
