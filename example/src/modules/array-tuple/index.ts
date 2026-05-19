@@ -7,10 +7,10 @@ export const example: ExampleDefinition = {
   id: 'array-tuple',
   path: '/arrays/tuple',
   label: 'Array — tuple',
-  description: 'useArray — tuple items schema per index',
+  description: 'useArray — tuple items (integer, enum string, object)',
   title: 'Array — tuple',
   summary:
-    'When items is an array of schemas, getItemSchema(index) resolves the schema for each slot.',
+    'HTTP response as a fixed tuple: status code, content-type, and body object. All three slots render on load; additionalItems: false prevents extra slots.',
   schema,
   Form,
 }

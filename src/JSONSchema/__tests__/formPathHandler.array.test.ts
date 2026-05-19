@@ -40,3 +40,36 @@ test('should accept a whole array value at the array pointer', () => {
     tags: ['a', 'b'],
   })
 })
+
+test('should build object array items from nested indexed pointers', () => {
+  const schema = {
+    type: 'object',
+    properties: {
+      contacts: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            name: { type: 'string' },
+            email: { type: 'string' },
+          },
+        },
+      },
+    },
+  }
+
+  const formData = {
+    '#/properties/contacts/0': {},
+    '#/properties/contacts/0/properties/name': 'Ada',
+    '#/properties/contacts/0/properties/email': 'ada@example.com',
+    '#/properties/contacts/1': {},
+    '#/properties/contacts/1/properties/name': 'Grace',
+  }
+
+  expect(getObjectFromForm(schema, formData)).toEqual({
+    contacts: [
+      { name: 'Ada', email: 'ada@example.com' },
+      { name: 'Grace' },
+    ],
+  })
+})

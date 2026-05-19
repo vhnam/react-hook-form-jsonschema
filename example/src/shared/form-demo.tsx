@@ -1,4 +1,4 @@
-import { useReducer, useState, type ReactNode } from 'react'
+import { type PropsWithChildren, useReducer, useState } from 'react'
 import {
   FormContext,
   type ObjectJSONSchemaType,
@@ -33,19 +33,18 @@ function reducer(state: SaveState, action: SaveAction): SaveState {
 }
 
 function save(_data: OnSubmitParameters['data']) {
-  return new Promise<void>(resolve => {
+  return new Promise<void>((resolve) => {
     setTimeout(resolve, 600)
   })
 }
 
-export type FormDemoProps = {
+export type FormDemoProps = PropsWithChildren<{
   schema: ObjectJSONSchemaType
   title: string
   description: string
   uiSchema?: UISchemaType
   defaultValues?: Record<string, unknown>
-  children: ReactNode
-}
+}>
 
 export function FormDemo({
   schema,
@@ -88,7 +87,9 @@ export function FormDemo({
             <p className="form-status form-status--error">Error saving.</p>
           )}
           {state.success && (
-            <p className="form-status form-status--success">Saved successfully.</p>
+            <p className="form-status form-status--success">
+              Saved successfully.
+            </p>
           )}
           {submitted != null && (
             <pre className="submit-output" aria-label="Submitted data">

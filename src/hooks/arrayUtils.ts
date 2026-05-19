@@ -1,4 +1,5 @@
 import type { ArrayJSONSchemaType, JSONSchemaType } from '../JSONSchema'
+import { getItemsSchemaForIndex as resolveItemsSchemaForIndex } from '../JSONSchema/logic/schemaAccess'
 import { getEnumAsStringArray } from '../utils/enumUtils'
 import {
   getArrayItemPointer,
@@ -12,6 +13,16 @@ import {
 } from './validators/numberUtilities'
 
 export { getArrayItemPointer, getListArrayEntries }
+
+export const getTupleItemsLength = (
+  arraySchema: ArrayJSONSchemaType
+): number => {
+  const items = arraySchema.items
+
+  return Array.isArray(items) ? items.length : 0
+}
+
+export { canAddBeyondTupleLength } from '../JSONSchema/logic/schemaAccess'
 
 export const getSingleItemsSchema = (
   arraySchema: ArrayJSONSchemaType
@@ -28,19 +39,7 @@ export const getSingleItemsSchema = (
 export const getItemsSchemaForIndex = (
   arraySchema: ArrayJSONSchemaType,
   index: number
-): JSONSchemaType | undefined => {
-  const items = arraySchema.items
-
-  if (items == null) {
-    return undefined
-  }
-
-  if (Array.isArray(items)) {
-    return items[index] ?? items[items.length - 1]
-  }
-
-  return items
-}
+): JSONSchemaType | undefined => resolveItemsSchemaForIndex(arraySchema, index)
 
 /** Multi-select from a fixed set of options (enum or numeric range). */
 export const isMultiSelectArray = (

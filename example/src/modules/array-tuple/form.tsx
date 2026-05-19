@@ -1,5 +1,5 @@
-import { TupleArrayField } from '../../shared/fields'
+import { ListArrayField } from '../../shared/fields'
 
 export function Form() {
-  return <TupleArrayField pointer="#/properties/coords" />
+  return <ListArrayField pointer="#/properties/response" />
 }

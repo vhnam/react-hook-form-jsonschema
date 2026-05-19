@@ -1,4 +1,4 @@
-import type { JSONSchemaType, JSONSubSchemaInfo } from '../types'
+import type { ArrayJSONSchemaType, JSONSchemaType, JSONSubSchemaInfo } from '../types'
 import type { JSONFormContextValues } from '../../components'
 import {
   concatFormPointer,
@@ -9,6 +9,7 @@ import {
   asFormDataNode,
   asObjectSchema,
   getSchemaNode,
+  getItemsSchemaForIndex,
   getSchemaProperty,
   isJSONSchemaObject,
 } from './schemaAccess'
@@ -44,7 +45,30 @@ export const getObjectFromForm = (
 
       splitPointer.reduce(
         (currentContext: FormReducerContext, node: string, index: number, src: string[]) => {
-          if (!isArrayIndex(node)) {
+          if (isArrayIndex(node) && currentContext.currentSubSchema?.type === 'array') {
+            const arraySchema = currentContext.currentSubSchema as ArrayJSONSchemaType
+            const itemIndex = parseInt(node, 10)
+            const itemsSchema = getItemsSchemaForIndex(arraySchema, itemIndex)
+
+            if (itemsSchema) {
+              currentContext.currentSubSchema = itemsSchema
+            }
+
+            const arrayTarget = currentContext.currentJSON as unknown[]
+
+            if (Array.isArray(arrayTarget) && arrayTarget[itemIndex] === undefined) {
+              const initialValue =
+                itemsSchema?.type === 'array'
+                  ? []
+                  : itemsSchema?.type === 'object'
+                    ? {}
+                    : undefined
+
+              if (initialValue !== undefined) {
+                arrayTarget[itemIndex] = initialValue
+              }
+            }
+          } else if (!isArrayIndex(node)) {
             currentContext.currentSubSchema = currentContext.currentSubSchema
               ? getSchemaProperty(currentContext.currentSubSchema, node)
               : undefined
@@ -90,9 +114,26 @@ export const getObjectFromForm = (
 
             if (isArrayIndex(node)) {
               const arrayTarget = currentContext.currentJSON as unknown[]
+              const itemIndex = parseInt(node, 10)
 
               if (Array.isArray(arrayTarget)) {
-                arrayTarget[parseInt(node, 10)] = parsedValue
+                const existing = arrayTarget[itemIndex]
+
+                if (
+                  typeof parsedValue === 'object' &&
+                  parsedValue !== null &&
+                  !Array.isArray(parsedValue) &&
+                  typeof existing === 'object' &&
+                  existing !== null &&
+                  !Array.isArray(existing)
+                ) {
+                  arrayTarget[itemIndex] = {
+                    ...(existing as Record<string, unknown>),
+                    ...(parsedValue as Record<string, unknown>),
+                  }
+                } else {
+                  arrayTarget[itemIndex] = parsedValue
+                }
               }
             } else if (currentContext.currentSubSchema) {
               Reflect.set(currentContext.currentJSON, node, parsedValue)
@@ -114,7 +155,9 @@ export const getObjectFromForm = (
             Reflect.set(currentContext.currentJSON, node, initialValue)
           }
 
-          const nextJson = getSchemaNode(currentContext.currentJSON, node)
+          const nextJson = isArrayIndex(node)
+            ? (currentContext.currentJSON as unknown[])[parseInt(node, 10)]
+            : getSchemaNode(currentContext.currentJSON, node)
           currentContext.currentJSON = Array.isArray(nextJson)
             ? nextJson
             : isJSONSchemaObject(nextJson)
@@ -158,6 +201,29 @@ export const getAnnotatedSchemaFromPointer = (
   const info = getSplitPointer(pointer).reduce(
     (currentInfo: ReducerSubSchemaInfo, node: string) => {
       const { JSONSchema, currentData } = currentInfo
+
+      if (isArrayIndex(node) && JSONSchema?.type === 'array') {
+        const nextSchema = getItemsSchemaForIndex(
+          JSONSchema as ArrayJSONSchemaType,
+          parseInt(node, 10)
+        )
+        const newCurrentData = asFormDataNode(
+          currentData ? getSchemaNode(currentData, node) : undefined
+        )
+
+        return {
+          ...currentInfo,
+          JSONSchema: nextSchema,
+          currentData: newCurrentData,
+          fatherExists: !!currentData,
+          isRequired: false,
+          invalidPointer: nextSchema === undefined,
+          objectName: node,
+          pointer: concatFormPointer(currentInfo.pointer, node),
+          insideProperties: false,
+        }
+      }
+
       const objectSchema = JSONSchema ? asObjectSchema(JSONSchema) : undefined
 
       if (!objectSchema && !currentInfo.insideProperties) {

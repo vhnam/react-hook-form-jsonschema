@@ -11,9 +11,11 @@ import type {
 } from '../utils/types/arrayHookTypes'
 import { InputTypes } from '../utils/inputTypes'
 import {
+  canAddBeyondTupleLength,
   getDefaultItemValue,
   getItemsSchemaForIndex,
   getSingleItemsSchema,
+  getTupleItemsLength,
 } from './arrayUtils'
 import { getArrayItemPointer, getListArrayEntries } from '../utils/listArrayFormUtils'
 import { ErrorTypes } from '../utils/errorTypes'
@@ -37,6 +39,7 @@ export const buildArrayReturn = (
 ): UseArrayReturnType => {
   const { formContext, pointer, validator } = baseInput
   const arraySchema = baseInput.getObject() as ArrayJSONSchemaType
+  const tupleLength = getTupleItemsLength(arraySchema)
   const defaultItemSchema = getSingleItemsSchema(arraySchema)
 
   const fields = Array.from({ length: fieldCount }, (_, index) => ({
@@ -70,6 +73,10 @@ export const buildArrayReturn = (
   }
 
   const canAdd = (): boolean => {
+    if (!canAddBeyondTupleLength(arraySchema, fieldCount)) {
+      return false
+    }
+
     if (arraySchema.maxItems == null) {
       return true
     }
@@ -78,7 +85,9 @@ export const buildArrayReturn = (
   }
 
   const canRemove = (index: number): boolean => {
-    if (arraySchema.minItems != null && fieldCount <= arraySchema.minItems) {
+    const effectiveMinItems = Math.max(arraySchema.minItems ?? 0, tupleLength)
+
+    if (fieldCount <= effectiveMinItems) {
       return false
     }
 
@@ -117,7 +126,16 @@ export const buildArrayReturn = (
 
   const isPrimitiveItem = (index: number): boolean => {
     const itemSchema = getItemSchema(index)
-    const type = itemSchema?.type
+
+    if (!itemSchema) {
+      return false
+    }
+
+    if (itemSchema.properties) {
+      return false
+    }
+
+    const type = itemSchema.type
 
     return (
       type === 'string' ||
@@ -206,11 +224,13 @@ export const buildArrayReturn = (
 
 export const useArray: UseArrayParameters = (pointer: string) => {
   const baseInput = useGenericInput(pointer)
-  const { formContext, validator } = baseInput
+  const { formContext } = baseInput
   const arraySchema = baseInput.getObject() as ArrayJSONSchemaType
+  const tupleLength = getTupleItemsLength(arraySchema)
   const initialCount = Math.max(
     getListArrayEntries(formContext.getValues(), pointer).length,
-    arraySchema.minItems ?? 0
+    arraySchema.minItems ?? 0,
+    tupleLength
   )
   const [fieldCount, setFieldCount] = useState(initialCount)
   const fieldCountRef = useRef(fieldCount)
@@ -218,18 +238,22 @@ export const useArray: UseArrayParameters = (pointer: string) => {
   fieldCountRef.current = fieldCount
 
   useEffect(() => {
-    const arrayRules: typeof validator.validate =
-      typeof validator.validate === 'object' ? { ...validator.validate } : {}
+    const minItems = Math.max(
+      arraySchema.minItems ?? 0,
+      baseInput.isRequired ? 1 : 0,
+      tupleLength
+    )
 
+    // List arrays store values at indexed pointers (`…/0`, `…/1`), not at the
+    // array pointer. RHF `required` / getArrayValidator rules read the parent
+    // field value and would always fail; length is validated here instead.
     formContext.register(pointer, {
-      ...validator,
       validate: {
-        ...arrayRules,
         arrayLength: (): string | true => {
           const entries = getListArrayEntries(formContext.getValues(), pointer)
           const length = Math.max(entries.length, fieldCountRef.current)
 
-          if (arraySchema.minItems != null && length < arraySchema.minItems) {
+          if (minItems > 0 && length < minItems) {
             return ErrorTypes.minItems
           }
 
@@ -248,9 +272,10 @@ export const useArray: UseArrayParameters = (pointer: string) => {
   }, [
     arraySchema.maxItems,
     arraySchema.minItems,
+    baseInput.isRequired,
     formContext,
     pointer,
-    validator,
+    tupleLength,
   ])
 
   return buildArrayReturn(baseInput, fieldCount, setFieldCount)

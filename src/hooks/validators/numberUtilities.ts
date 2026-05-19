@@ -104,11 +104,13 @@ export const getNumberValidator = (
         if (numberSchema.type === 'integer' && value) {
           const multipleOf = numberSchema.multipleOf
 
-          return (
-            (multipleOf != null &&
-              Number.parseInt(value, 10) % multipleOf === 0) ||
-            ErrorTypes.multipleOf
-          )
+          if (multipleOf == null) {
+            return true
+          }
+
+          return Number.parseInt(value, 10) % multipleOf === 0
+            ? true
+            : ErrorTypes.multipleOf
         }
 
         // TODO: implement float checking with epsilon

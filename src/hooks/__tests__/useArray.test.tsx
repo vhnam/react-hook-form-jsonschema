@@ -60,6 +60,27 @@ const MockTagsArray = () => {
   )
 }
 
+test('submits with required tags schema when indexed items are filled', async () => {
+  let submitted: { tags?: string[] } = {}
+
+  const { getByText, getByLabelText } = render(
+    <FormContext
+      schema={tagsSchema}
+      onSubmit={({ data }) => {
+        submitted = data as { tags?: string[] }
+      }}
+    >
+      <MockTagsArray />
+      <input type="submit" value="Submit" />
+    </FormContext>
+  )
+
+  fireEvent.change(getByLabelText('tag-0'), { target: { value: 'react' } })
+  fireEvent.click(getByText('Submit'))
+
+  await waitFor(() => expect(submitted.tags).toEqual(['react']))
+})
+
 test('appends items and submits string array', async () => {
   let submitted: { tags?: string[] } = {}
 
@@ -94,6 +115,55 @@ test('shows minItems error when empty', async () => {
   fireEvent.click(getByText('Submit'))
 
   await waitFor(() => expect(getByText('Array error')).toBeDefined())
+})
+
+const tupleCoordsSchema = {
+  type: 'object',
+  properties: {
+    coords: {
+      type: 'array',
+      title: 'Coordinates',
+      items: [
+        { type: 'integer', title: 'Latitude' },
+        { type: 'integer', title: 'Longitude' },
+      ],
+    },
+  },
+}
+
+const MockTupleArray = () => {
+  const methods = useArray('#/properties/coords')
+
+  return (
+    <>
+      {methods.getFields().map((field, index) => {
+        const itemSchema = methods.getItemSchema(index)
+
+        return (
+          <div key={field.id}>
+            <span>{itemSchema?.title ?? `Index ${index}`}</span>
+            <input
+              {...methods.getItemInputProps(index)}
+              aria-label={`coord-${index}`}
+            />
+          </div>
+        )
+      })}
+    </>
+  )
+}
+
+test('renders all tuple item slots on mount', () => {
+  const { getByText, getByLabelText } = render(
+    <FormContext schema={tupleCoordsSchema} onSubmit={() => {}}>
+      <MockTupleArray />
+    </FormContext>
+  )
+
+  expect(getByText('Latitude')).toBeDefined()
+  expect(getByText('Longitude')).toBeDefined()
+  expect(getByLabelText('coord-0')).toBeDefined()
+  expect(getByLabelText('coord-1')).toBeDefined()
 })
 
 test('respects maxItems when adding', async () => {
