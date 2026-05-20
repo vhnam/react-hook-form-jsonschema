@@ -12,7 +12,7 @@ Try a live demo on [CodeSandbox](https://codesandbox.io/s/react-hook-form-jsonsc
 cd example && pnpm install && pnpm dev
 ```
 
-The local example app includes routes for primitive fields, enums, checkboxes, primitive arrays, object arrays, tuple arrays, and UI schema overrides.
+The local example app includes routes for primitive fields, enums, checkboxes, default values, primitive arrays, object arrays, tuple arrays, and UI schema overrides.
 
 [Supported JSON Schema keywords](#supported-json-schema-keywords)
 
@@ -58,6 +58,7 @@ const personSchema = {
       type: 'string',
       title: 'First Name',
       description: "The person's first name.",
+      default: 'Jane',
     },
   },
 }
@@ -90,7 +91,9 @@ function PersonForm() {
 }
 ```
 
-See `example/src/modules/` for fuller examples, including `useObject`, `useArray`, and UI schema overrides.
+Schema `default` values are applied as initial form values and are included in submitted data even when the user does not touch the field.
+
+See `example/src/modules/` for fuller examples, including default values, `useObject`, `useArray`, and UI schema overrides.
 
 ## Installation
 
@@ -171,7 +174,9 @@ The library also exports `useFormContext()` to access the same context value fro
   - `event`: React synthetic event (if available)
   - `methods`: `JSONFormContextValues` — full form context, including react-hook-form methods such as `trigger`, `reset`, and `setValue`
 - `noNativeValidate`: When `true`, sets `noValidate` on the `<form>` so the browser does not block submit. Default: `true`. Native validation is disabled because this library does not implement URI/email `format` validation in HTML5 attributes.
-- `defaultValues`: Initial form values (react-hook-form `defaultValues`). These override any `default` values from the JSON Schema.
+- `defaultValues`: Initial form values keyed by JSON Pointer. These override any `default` values from the JSON Schema.
+
+`FormContext` derives react-hook-form defaults from the resolved schema's `default` keywords, including primitives, nested object properties, arrays, tuple items, object-array rows, and multi-select checkbox arrays. If either `schema` defaults or explicit `defaultValues` change on rerender, the form resets to the new merged defaults.
 
 ## Functions API
 
@@ -328,7 +333,7 @@ Common fields plus:
 - `getItemValidator(index)`: react-hook-form validator for that row’s item schema.
 - `getItemInputProps(index)`: Input props for primitive item types.
 - `getItemLabelProps(index)`: Label props for a primitive row.
-- `appendItem()` / `removeItem(index)`: Add or remove rows (`minItems`, `maxItems`, tuple length, and `additionalItems` respected).
+- `appendItem()` / `removeItem(index)`: Add or remove rows (`minItems`, `maxItems`, tuple length, item schema `default`, and `additionalItems` respected).
 - `canAdd()` / `canRemove(index)`: Whether add/remove is allowed.
 - `isPrimitiveItem(index)`: `true` when the row can use `getItemInputProps`.
 
@@ -374,7 +379,7 @@ function TagsField({ pointer }: { pointer: string }) {
 
 **Description**
 
-Build a single or multi-option checkbox field. For `type: 'array'`, this is used when options are a fixed set (`items.enum` or a bounded numeric range). For open-ended lists, use `useArray`.
+Build a single or multi-option checkbox field. For `type: 'array'`, this is used when options are a fixed set (`items.enum` or a bounded numeric range). Schema defaults for multi-select arrays are expanded into checkbox option slots for rendering and compacted back to selected values on submit. For open-ended lists, use `useArray`.
 
 **Parameters:**
 
@@ -788,6 +793,7 @@ function TextAreaField() {
 - `uniqueItems` (list arrays via `useArray`; multi-select via `useCheckbox`)
 - `required`
 - `enum`
+- `default` (initial form values for primitives, objects, arrays, tuples, object-array rows, and multi-select checkbox arrays)
 - `type` (does not support an array of types)
 - `properties`
 - `$id`
