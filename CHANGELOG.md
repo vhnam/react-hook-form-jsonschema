@@ -7,22 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-05-20
+
 ### Added
 
 - JSON Schema `default` keyword support for primitives, nested object properties, arrays, tuple items, object-array rows, and multi-select checkbox arrays.
+- JSON Schema `const` keyword support for primitive fields, object values, array values, nested object properties, and tuple/list array items.
 - `useArray(pointer)` for JSON Schema array fields, including append/remove helpers, stable row metadata, item pointers, item schemas, item validators, and primitive item props.
 - List array support for primitive rows, object rows rendered through `useObject`, and tuple-style `items` arrays with `additionalItems` handling.
 - Array form data support for indexed JSON Pointers such as `#/properties/tags/0` and nested object rows such as `#/properties/contacts/0/properties/name`.
 - Array validation for `minItems`, `maxItems`, `uniqueItems`, and per-item enum/string/number constraints.
-- `ErrorTypes.minItems`, `ErrorTypes.maxItems`, and `ErrorTypes.uniqueItems`.
+- `ErrorTypes.notConst`, `ErrorTypes.minItems`, `ErrorTypes.maxItems`, and `ErrorTypes.uniqueItems`.
 - Public array helpers and types, including `InputTypes.fieldArray`, `UseArrayReturnType`, `getArrayItemPointer`, and `getListArrayEntries`.
-- Example app routes for primitive arrays, object arrays, tuple arrays, checkbox arrays, default values, enums, primitive fields, and UI schema overrides.
+- Example app routes for primitive arrays, object arrays, tuple arrays, checkbox arrays, default values, const values, enums, primitive fields, and UI schema overrides.
 
 ### Changed
 
 - **BREAKING**: `type: 'array'` in `useObject` only auto-renders as checkboxes for multi-select schemas (`items.enum` or bounded numeric ranges); open-ended list and tuple arrays should be rendered explicitly with `useArray`.
-- `FormContext` derives react-hook-form defaults from schema `default` values, allows explicit `defaultValues` to override them, and resets when either source changes.
+- `FormContext` derives react-hook-form defaults from schema `default` values or `const` values when no `default` is present, allows explicit `defaultValues` to override them, and resets when either source changes.
+- `FormContext` validates assembled submit data against object and array `const` constraints before calling `onSubmit`.
 - `getGenericValidator` applies array rules instead of returning an empty validator for `type: 'array'`.
+- `getGenericValidator` and `getArrayValidator` enforce `const` constraints, including primitive form-value coercion and structural object/array comparisons.
 - Multi-select checkbox arrays now derive options from shared array helpers and use array-specific error messages for `minItems`, `maxItems`, and `uniqueItems`.
 - `useArray().appendItem()` initializes new rows with the item schema `default` value when available.
 
