@@ -18,7 +18,10 @@ import {
 } from '../JSONSchema/logic/schemaHandlers'
 import { getIdSchemaPairs, resolveRefs } from '../JSONSchema/logic/refHandlers'
 import { ErrorTypes } from '../utils/errorTypes'
-import { getSchemaConstValidationErrors } from '../utils/constUtils'
+import {
+  areJSONValuesEqual,
+  getSchemaConstValidationErrors,
+} from '../utils/constUtils'
 
 type SchemaData = Record<string, unknown>
 type GetSchemaData = (
@@ -82,6 +85,7 @@ export const FormContext = <FormValues extends FieldValues = FieldValues>(
   })
   const { reset } = methods
   const hasMountedRef = useRef(false)
+  const formDefaultValuesRef = useRef<DefaultValues<FormValues>>(formDefaultValues)
   const schemaDataCacheRef = useRef<SchemaDataCache | undefined>(undefined)
   const constErrorPointersRef = useRef<string[]>([])
 
@@ -112,10 +116,16 @@ export const FormContext = <FormValues extends FieldValues = FieldValues>(
   useEffect(() => {
     if (!hasMountedRef.current) {
       hasMountedRef.current = true
+      formDefaultValuesRef.current = formDefaultValues
 
       return
     }
 
+    if (areJSONValuesEqual(formDefaultValuesRef.current, formDefaultValues)) {
+      return
+    }
+
+    formDefaultValuesRef.current = formDefaultValues
     reset(formDefaultValues)
   }, [formDefaultValues, reset])
 

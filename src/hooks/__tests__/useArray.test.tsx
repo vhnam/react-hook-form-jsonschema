@@ -43,6 +43,30 @@ const tagsSchemaWithItemDefault = {
   },
 }
 
+const tagsSchemaWithOneDefault = {
+  type: 'object',
+  properties: {
+    tags: {
+      type: 'array',
+      title: 'Tags',
+      default: ['react'],
+      items: { type: 'string' },
+    },
+  },
+}
+
+const tagsSchemaWithTwoDefaults = {
+  type: 'object',
+  properties: {
+    tags: {
+      type: 'array',
+      title: 'Tags',
+      default: ['react', 'typescript'],
+      items: { type: 'string' },
+    },
+  },
+}
+
 const tagsSchemaWithConst = {
   type: 'object',
   properties: {
@@ -152,6 +176,48 @@ test('appends items with item schema default values', async () => {
   fireEvent.click(getByText('Submit'))
 
   await waitFor(() => expect(submitted.tags).toEqual(['draft']))
+})
+
+test('syncs rows when array defaults change on rerender', async () => {
+  const { getByLabelText, rerender } = render(
+    <FormContext schema={tagsSchemaWithOneDefault}>
+      <MockTagsArray />
+    </FormContext>
+  )
+
+  expect((getByLabelText('tag-0') as HTMLInputElement).value).toBe('react')
+
+  rerender(
+    <FormContext schema={tagsSchemaWithTwoDefaults}>
+      <MockTagsArray />
+    </FormContext>
+  )
+
+  await waitFor(() =>
+    expect((getByLabelText('tag-1') as HTMLInputElement).value).toBe(
+      'typescript'
+    )
+  )
+})
+
+test('removes stale rows when array defaults shrink on rerender', async () => {
+  const { getByLabelText, queryByLabelText, rerender } = render(
+    <FormContext schema={tagsSchemaWithTwoDefaults}>
+      <MockTagsArray />
+    </FormContext>
+  )
+
+  expect((getByLabelText('tag-0') as HTMLInputElement).value).toBe('react')
+  expect((getByLabelText('tag-1') as HTMLInputElement).value).toBe('typescript')
+
+  rerender(
+    <FormContext schema={tagsSchemaWithOneDefault}>
+      <MockTagsArray />
+    </FormContext>
+  )
+
+  await waitFor(() => expect(queryByLabelText('tag-1')).toBeNull())
+  expect((getByLabelText('tag-0') as HTMLInputElement).value).toBe('react')
 })
 
 test('shows minItems error when empty', async () => {

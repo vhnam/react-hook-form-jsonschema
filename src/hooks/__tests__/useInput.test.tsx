@@ -45,17 +45,29 @@ test('useInput type email', () => {
   expect(type).toBe('email')
 })
 
-test('useInput type hostname', () => {
-  const { result } = renderHook(
-    () => useInput('#/properties/stringHostnameTest'),
-    {
-      wrapper: Wrapper,
-    }
-  )
+test('useInput type time', () => {
+  const { result } = renderHook(() => useInput('#/properties/stringTimeTest'), {
+    wrapper: Wrapper,
+  })
 
   const { type } = result.current.getInputProps()
 
-  expect(type).toBe('url')
+  expect(type).toBe('time')
+})
+
+test.each([
+  ['hostname', '#/properties/stringHostnameTest'],
+  ['uuid', '#/properties/stringUuidTest'],
+  ['ipv4', '#/properties/stringIpv4Test'],
+  ['json-pointer', '#/properties/stringJsonPointerTest'],
+])('useInput leaves %s format as text input', (_, pointer) => {
+  const { result } = renderHook(() => useInput(pointer), {
+    wrapper: Wrapper,
+  })
+
+  const { type } = result.current.getInputProps()
+
+  expect(type).toBe('text')
 })
 
 test('useInput type uri', () => {

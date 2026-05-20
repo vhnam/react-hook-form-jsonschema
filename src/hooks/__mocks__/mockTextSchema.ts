@@ -36,6 +36,11 @@ const mockTextSchema = {
       title: 'test-useInput-format-date-time',
       format: 'date-time',
     },
+    stringTimeTest: {
+      type: 'string',
+      title: 'test-useInput-format-time',
+      format: 'time',
+    },
     stringEmailTest: {
       type: 'string',
       title: 'test-useInput-format-email',
@@ -46,10 +51,25 @@ const mockTextSchema = {
       title: 'test-useInput-format-hostname',
       format: 'hostname',
     },
+    stringUuidTest: {
+      type: 'string',
+      title: 'test-useInput-format-uuid',
+      format: 'uuid',
+    },
+    stringIpv4Test: {
+      type: 'string',
+      title: 'test-useInput-format-ipv4',
+      format: 'ipv4',
+    },
     stringUriTest: {
       type: 'string',
       title: 'test-useInput-format-uri',
       format: 'uri',
+    },
+    stringJsonPointerTest: {
+      type: 'string',
+      title: 'test-useInput-format-json-pointer',
+      format: 'json-pointer',
     },
   },
 }

@@ -110,6 +110,37 @@ test('should raise maxLength error for a maxLength zero string', async () => {
   )
 })
 
+test('should raise format error for an invalid formatted string', async () => {
+  const schema = {
+    type: 'object',
+    properties: {
+      email: {
+        type: 'string',
+        title: 'Email',
+        format: 'email',
+      },
+    },
+  }
+
+  const { getByText, getByLabelText } = render(
+    <FormContext schema={schema} onSubmit={() => {}} noNativeValidate>
+      <MockInput path="#/properties/email" />
+      <input type="submit" value="Submit" />
+    </FormContext>
+  )
+
+  fireEvent.change(getByLabelText('Email'), {
+    target: { value: 'not-an-email' },
+  })
+  getByText('Submit').click()
+
+  await waitFor(() =>
+    expect(
+      getByText(`This is an error: ${ErrorTypes.format}:email`)
+    ).toBeDefined()
+  )
+})
+
 describe('testing integer boundaries', () => {
   it('should raise error for maximum', async () => {
     const { getByText, getByLabelText } = render(

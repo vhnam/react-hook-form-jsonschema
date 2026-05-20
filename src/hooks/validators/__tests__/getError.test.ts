@@ -97,4 +97,25 @@ describe('getError', () => {
       expected: { role: 'admin' },
     })
   })
+
+  test('maps format errors to the expected schema format', () => {
+    const error = getError(
+      {
+        type: 'validate',
+        message: ErrorTypes.format,
+      },
+      {
+        type: 'string',
+        format: 'email',
+      },
+      false,
+      createFormContext({}),
+      '#/properties/email'
+    )
+
+    expect(error).toEqual({
+      message: ErrorTypes.format,
+      expected: 'email',
+    })
+  })
 })

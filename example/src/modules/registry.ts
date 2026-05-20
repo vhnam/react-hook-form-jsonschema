@@ -7,6 +7,7 @@ import { example as checkbox } from './checkbox'
 import { example as constKeyword } from './const'
 import { example as defaultKeyword } from './default'
 import { example as enums } from './enums'
+import { example as format } from './format'
 import { example as primitives } from './primitives'
 import { example as uiOverrides } from './ui-overrides'
 
@@ -15,6 +16,7 @@ export const examples: ExampleDefinition[] = [
   primitives,
   defaultKeyword,
   constKeyword,
+  format,
   enums,
   checkbox,
   uiOverrides,

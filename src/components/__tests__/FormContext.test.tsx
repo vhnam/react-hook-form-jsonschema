@@ -253,6 +253,49 @@ test('should reset values when schema defaults change on rerender', async () => 
   )
 })
 
+test('should preserve user edits when equivalent schema defaults rerender', async () => {
+  const schema = {
+    type: 'object',
+    properties: {
+      firstName: {
+        type: 'string',
+        default: 'Jane',
+      },
+    },
+  }
+  const equivalentSchema = {
+    type: 'object',
+    properties: {
+      firstName: {
+        type: 'string',
+        default: 'Jane',
+      },
+    },
+  }
+
+  const { getByLabelText, rerender } = render(
+    <FormContext schema={schema}>
+      <InputRenderer label="First name" pointer="#/properties/firstName" />
+    </FormContext>
+  )
+
+  fireEvent.change(getByLabelText('First name'), {
+    target: { value: 'Grace' },
+  })
+
+  rerender(
+    <FormContext schema={equivalentSchema}>
+      <InputRenderer label="First name" pointer="#/properties/firstName" />
+    </FormContext>
+  )
+
+  await waitFor(() =>
+    expect((getByLabelText('First name') as HTMLInputElement).value).toBe(
+      'Grace'
+    )
+  )
+})
+
 test('should reset values when defaultValues change on rerender', async () => {
   const submitHandlerMock = jest.fn()
   const schema = {
@@ -300,6 +343,45 @@ test('should reset values when defaultValues change on rerender', async () => {
           firstName: 'Ada',
         },
       })
+    )
+  )
+})
+
+test('should preserve user edits when equivalent defaultValues rerender', async () => {
+  const schema = {
+    type: 'object',
+    properties: {
+      firstName: {
+        type: 'string',
+      },
+    },
+  }
+
+  const { getByLabelText, rerender } = render(
+    <FormContext
+      defaultValues={{ '#/properties/firstName': 'Jane' }}
+      schema={schema}
+    >
+      <InputRenderer label="First name" pointer="#/properties/firstName" />
+    </FormContext>
+  )
+
+  fireEvent.change(getByLabelText('First name'), {
+    target: { value: 'Grace' },
+  })
+
+  rerender(
+    <FormContext
+      defaultValues={{ '#/properties/firstName': 'Jane' }}
+      schema={schema}
+    >
+      <InputRenderer label="First name" pointer="#/properties/firstName" />
+    </FormContext>
+  )
+
+  await waitFor(() =>
+    expect((getByLabelText('First name') as HTMLInputElement).value).toBe(
+      'Grace'
     )
   )
 })
