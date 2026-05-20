@@ -14,6 +14,10 @@ import {
 
 export { getArrayItemPointer, getListArrayEntries }
 
+const MAX_GENERATED_OPTIONS = 1000
+const multiSelectOptionsCache = new WeakMap<ArrayJSONSchemaType, string[]>()
+const numberRangeOptionsCache = new WeakMap<object, string[]>()
+
 export const getTupleItemsLength = (
   arraySchema: ArrayJSONSchemaType
 ): number => {
@@ -69,9 +73,68 @@ export const isMultiSelectArray = (
   return false
 }
 
+export const getNumberRangeOptions = (
+  schema: JSONSchemaType,
+  fallbackSchema?: ArrayJSONSchemaType
+): string[] => {
+  const cacheKey = fallbackSchema ? undefined : (schema as object)
+  const cached = cacheKey ? numberRangeOptionsCache.get(cacheKey) : undefined
+
+  if (cached) {
+    return [...cached]
+  }
+
+  const stepAndDecimalPlaces = getNumberStep(schema)
+  const step = stepAndDecimalPlaces[0]
+  const decimalPlaces = stepAndDecimalPlaces[1]
+  const fallbackMinimum = fallbackSchema
+    ? getNumberMinimum(fallbackSchema)
+    : undefined
+  const fallbackMaximum = fallbackSchema
+    ? getNumberMaximum(fallbackSchema)
+    : undefined
+  const minimum = getNumberMinimum(schema) ?? fallbackMinimum
+  const maximum = getNumberMaximum(schema) ?? fallbackMaximum
+  const options: string[] = []
+
+  if (
+    minimum === undefined ||
+    maximum === undefined ||
+    step === 'any' ||
+    step <= 0
+  ) {
+    return options
+  }
+
+  const optionCount = Math.floor((maximum - minimum) / step) + 1
+
+  if (optionCount > MAX_GENERATED_OPTIONS) {
+    return options
+  }
+
+  const tolerance =
+    Number.EPSILON * Math.max(1, Math.abs(maximum), Math.abs(step)) * 100
+
+  for (let i = minimum; i <= maximum + tolerance; i += step) {
+    options.push(toFixed(i, decimalPlaces || 0))
+  }
+
+  if (cacheKey) {
+    numberRangeOptionsCache.set(cacheKey, options)
+  }
+
+  return [...options]
+}
+
 export const getMultiSelectOptions = (
   arraySchema: ArrayJSONSchemaType
 ): string[] => {
+  const cached = multiSelectOptionsCache.get(arraySchema)
+
+  if (cached) {
+    return [...cached]
+  }
+
   const items = getSingleItemsSchema(arraySchema)
 
   if (!items) {
@@ -85,27 +148,16 @@ export const getMultiSelectOptions = (
   } else if (items.type === 'string' && arraySchema.enum) {
     options = getEnumAsStringArray(arraySchema)
   } else if (items.type === 'number' || items.type === 'integer') {
-    const stepAndDecimalPlaces = getNumberStep(items)
-    const step = stepAndDecimalPlaces[0]
-    const decimalPlaces = stepAndDecimalPlaces[1]
-    const minimum = getNumberMinimum(items) ?? getNumberMinimum(arraySchema)
-    const maximum = getNumberMaximum(items) ?? getNumberMaximum(arraySchema)
-
-    if (minimum !== undefined && maximum !== undefined && step !== 'any') {
-      const tolerance =
-        Number.EPSILON * Math.max(1, Math.abs(maximum), Math.abs(step)) * 100
-
-      for (let i = minimum; i <= maximum + tolerance; i += step) {
-        options.push(toFixed(i, decimalPlaces || 0))
-      }
-    }
+    options = getNumberRangeOptions(items, arraySchema)
   }
 
   if (arraySchema.uniqueItems) {
     options = [...new Set(options)]
   }
 
-  return options
+  multiSelectOptionsCache.set(arraySchema, options)
+
+  return [...options]
 }
 
 /** Checkbox option field names (legacy bracket form). */

@@ -8,13 +8,31 @@ import type {
 import { normalizeArrayValue } from '../arrayUtils'
 import { ErrorTypes } from '../../utils/errorTypes'
 import { getNumberValidator } from './getNumberValidator'
+import {
+  getSchemaConst,
+  hasSchemaConst,
+  isFormValueEqualToConst,
+} from '../../utils/constUtils'
 
 const validateItemValue = (
   value: unknown,
-  itemSchema: JSONSchemaType
+  itemSchema: JSONSchemaType,
+  pattern?: RegExp,
+  numberValidators?: Record<string, (v: string) => string | true>
 ): string | true => {
   if (value === undefined || value === null || value === '') {
-    return true
+    if (
+      hasSchemaConst(itemSchema) &&
+      Object.is(getSchemaConst(itemSchema), value)
+    ) {
+      return true
+    }
+
+    return hasSchemaConst(itemSchema) ? ErrorTypes.notConst : true
+  }
+
+  if (hasSchemaConst(itemSchema)) {
+    return isFormValueEqualToConst(value, itemSchema) || ErrorTypes.notConst
   }
 
   if (
@@ -40,41 +58,25 @@ const validateItemValue = (
   if (itemSchema.type === 'string') {
     const stringSchema = itemSchema as StringJSONSchemaType
 
-    if (
-      stringSchema.minLength != null &&
-      str.length < stringSchema.minLength
-    ) {
+    if (stringSchema.minLength != null && str.length < stringSchema.minLength) {
       return ErrorTypes.minLength
     }
 
-    if (
-      stringSchema.maxLength != null &&
-      str.length > stringSchema.maxLength
-    ) {
+    if (stringSchema.maxLength != null && str.length > stringSchema.maxLength) {
       return ErrorTypes.maxLength
     }
 
-    if (
-      stringSchema.pattern &&
-      !new RegExp(stringSchema.pattern).test(str)
-    ) {
+    if (pattern && !pattern.test(str)) {
       return ErrorTypes.pattern
     }
   }
 
-  if (itemSchema.type === 'integer' || itemSchema.type === 'number') {
-    const numOpts = getNumberValidator(itemSchema, {})
-    const validators = numOpts.validate as
-      | Record<string, (v: string) => string | true>
-      | undefined
+  if (numberValidators) {
+    for (const fn of Object.values(numberValidators)) {
+      const result = fn(str)
 
-    if (validators) {
-      for (const fn of Object.values(validators)) {
-        const result = fn(str)
-
-        if (result !== true) {
-          return result
-        }
+      if (result !== true) {
+        return result
       }
     }
   }
@@ -89,7 +91,10 @@ export const getArrayValidator = (
 ): RegisterOptions => {
   const validate: Record<string, (value: unknown) => string | true> = {
     ...(typeof baseValidator.validate === 'object'
-      ? (baseValidator.validate as Record<string, (value: unknown) => string | true>)
+      ? (baseValidator.validate as Record<
+          string,
+          (value: unknown) => string | true
+        >)
       : {}),
   }
 
@@ -137,11 +142,27 @@ export const getArrayValidator = (
   }
 
   if (itemSchema) {
+    const stringSchema = itemSchema as StringJSONSchemaType
+    const pattern = stringSchema.pattern
+      ? new RegExp(stringSchema.pattern)
+      : undefined
+    const numberValidators =
+      itemSchema.type === 'integer' || itemSchema.type === 'number'
+        ? (getNumberValidator(itemSchema, {}).validate as
+            | Record<string, (v: string) => string | true>
+            | undefined)
+        : undefined
+
     validate.items = (value: unknown) => {
       const arr = normalizeArrayValue(value)
 
       for (const entry of arr) {
-        const result = validateItemValue(entry, itemSchema)
+        const result = validateItemValue(
+          entry,
+          itemSchema,
+          pattern,
+          numberValidators
+        )
 
         if (result !== true) {
           return result
@@ -154,6 +175,7 @@ export const getArrayValidator = (
 
   return {
     ...baseValidator,
-    validate: Object.keys(validate).length > 0 ? validate : baseValidator.validate,
+    validate:
+      Object.keys(validate).length > 0 ? validate : baseValidator.validate,
   }
 }

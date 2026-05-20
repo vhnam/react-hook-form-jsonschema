@@ -1,10 +1,10 @@
 import { fireEvent, render, waitFor } from '@testing-library/react'
-import { Controller } from 'react-hook-form'
+import { Controller, useFormState } from 'react-hook-form'
 
 import { useObject } from '../../hooks/useObject'
 import { useInput } from '../../hooks/useInput'
 import mockSchema from '../__mocks__/mockFormSchema'
-import { FormContext } from '../FormContext'
+import { FormContext, useFormContext } from '../FormContext'
 
 const ObjectRenderer = (props: { pointer: string }) => {
   const fields = useObject({ pointer: props.pointer })
@@ -34,6 +34,16 @@ const InputRenderer = (props: { label: string; pointer: string }) => {
   const field = useInput(props.pointer)
 
   return <input aria-label={props.label} {...field.getInputProps()} />
+}
+
+const RootErrorRenderer = () => {
+  const formContext = useFormContext()
+  const { errors } = useFormState({
+    control: formContext.control,
+    name: '#',
+  })
+
+  return errors['#'] ? <p>Root const error</p> : null
 }
 
 test('should call onChange when something changes', () => {
@@ -150,6 +160,45 @@ test('should let form default values override schema defaults', async () => {
       })
     )
   )
+})
+
+test('should block submit when root object const is changed', async () => {
+  const submitHandlerMock = jest.fn()
+  const schemaWithObjectConst = {
+    type: 'object',
+    const: {
+      profile: {
+        role: 'admin',
+      },
+    },
+    properties: {
+      profile: {
+        type: 'object',
+        properties: {
+          role: {
+            type: 'string',
+          },
+        },
+      },
+    },
+  }
+
+  const { getByLabelText, getByText } = render(
+    <FormContext schema={schemaWithObjectConst} onSubmit={submitHandlerMock}>
+      <InputRenderer
+        label="Role"
+        pointer="#/properties/profile/properties/role"
+      />
+      <RootErrorRenderer />
+      <input type="submit" value="Submit" />
+    </FormContext>
+  )
+
+  fireEvent.change(getByLabelText('Role'), { target: { value: 'user' } })
+  fireEvent.click(getByText('Submit'))
+
+  await waitFor(() => expect(getByText('Root const error')).toBeDefined())
+  expect(submitHandlerMock).not.toHaveBeenCalled()
 })
 
 test('should reset values when schema defaults change on rerender', async () => {

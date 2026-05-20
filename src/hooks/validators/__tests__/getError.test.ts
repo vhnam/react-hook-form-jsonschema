@@ -76,4 +76,25 @@ describe('getError', () => {
       expected: 3,
     })
   })
+
+  test('maps const errors to the expected schema value', () => {
+    const error = getError(
+      {
+        type: 'validate',
+        message: ErrorTypes.notConst,
+      },
+      {
+        type: 'object',
+        const: { role: 'admin' },
+      },
+      false,
+      createFormContext({}),
+      '#/properties/profile'
+    )
+
+    expect(error).toEqual({
+      message: ErrorTypes.notConst,
+      expected: { role: 'admin' },
+    })
+  })
 })

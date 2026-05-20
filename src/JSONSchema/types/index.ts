@@ -26,7 +26,7 @@ export interface BasicJSONSchemaType {
   oneOf?: JSONSchemaType[]
   not?: JSONSchemaType[]
   enum?: JSONSchemaBaseInstanceTypes[]
-  const?: unknown
+  const?: JSONValue
   default?: unknown
   examples?: unknown
   [key: string]: unknown

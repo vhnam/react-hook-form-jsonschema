@@ -9,6 +9,7 @@ export enum ErrorTypes {
   notFloat = '__form_error_notFloat__',
   multipleOf = '__form_error_multipleOf__',
   notInEnum = '__form_error_notInEnum',
+  notConst = '__form_error_notConst__',
   minItems = '__form_error_minItems__',
   maxItems = '__form_error_maxItems__',
   uniqueItems = '__form_error_uniqueItems__',

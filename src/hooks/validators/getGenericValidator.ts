@@ -7,6 +7,10 @@ import { getStringValidator } from './getStringValidator'
 import { getArrayValidator } from './getArrayValidator'
 import type { ArrayJSONSchemaType, JSONSubSchemaInfo } from '../../JSONSchema'
 import { getSingleItemsSchema } from '../arrayUtils'
+import {
+  hasSchemaConst,
+  isFormValueEqualToConst,
+} from '../../utils/constUtils'
 
 type GetCustomValidatorReturnType = Record<
   string,
@@ -39,7 +43,8 @@ export const getValidator = (
   // that is it fails to validate if the `validate` field exists but is empty.
   const hasValidate =
     Object.keys(customValidators).length > 0 ||
-    (JSONSchema.enum != null && JSONSchema.enum.length > 0)
+    (JSONSchema.enum != null && JSONSchema.enum.length > 0) ||
+    hasSchemaConst(JSONSchema)
 
   const validator: RegisterOptions = {
     ...(hasValidate
@@ -61,6 +66,24 @@ export const getValidator = (
                     }
 
                     return ErrorTypes.notInEnum
+                  },
+                }
+              : undefined),
+
+            ...(hasSchemaConst(JSONSchema)
+              ? {
+                  constValidator: (value: unknown) => {
+                    if (
+                      (value === undefined || value === null || value === '') &&
+                      JSONSchema.const !== ''
+                    ) {
+                      return true
+                    }
+
+                    return (
+                      isFormValueEqualToConst(value, JSONSchema) ||
+                      ErrorTypes.notConst
+                    )
                   },
                 }
               : undefined),

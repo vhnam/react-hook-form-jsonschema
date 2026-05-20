@@ -21,6 +21,7 @@ import {
   getSchemaProperty,
   isJSONSchemaObject,
 } from './schemaAccess'
+import { getSchemaConst, hasSchemaConst } from '../../utils/constUtils'
 
 const isArrayIndex = (node: string): boolean => /^\d+$/.test(node)
 
@@ -35,8 +36,16 @@ const hasOwnProperty = (object: object, key: string): boolean =>
 const getRecordValue = (object: object, key: string): unknown =>
   (object as Record<string, unknown>)[key]
 
-const getSchemaDefault = (schema: JSONSchemaType): unknown =>
-  (schema as { default?: unknown }).default
+const hasSchemaDefault = (schema: JSONSchemaType): boolean =>
+  hasOwnProperty(schema, 'default')
+
+const hasSchemaInitialValue = (schema: JSONSchemaType): boolean =>
+  hasSchemaDefault(schema) || hasSchemaConst(schema)
+
+const getSchemaInitialValue = (schema: JSONSchemaType): unknown =>
+  hasSchemaDefault(schema)
+    ? (schema as { default?: unknown }).default
+    : getSchemaConst(schema)
 
 const cloneDefaultValue = (value: unknown): unknown => {
   if (Array.isArray(value)) {
@@ -97,10 +106,10 @@ const collectArrayDefaultValues = (
   schema: ArrayJSONSchemaType,
   context: DefaultValueContext
 ): void => {
-  const schemaHasDefault = hasOwnProperty(schema, 'default')
-  const hasDefault = schemaHasDefault || context.hasInheritedDefault
-  const defaultValue = schemaHasDefault
-    ? getSchemaDefault(schema)
+  const schemaHasInitialValue = hasSchemaInitialValue(schema)
+  const hasDefault = schemaHasInitialValue || context.hasInheritedDefault
+  const defaultValue = schemaHasInitialValue
+    ? getSchemaInitialValue(schema)
     : context.inheritedDefault
   const isMultiSelectDefault =
     Array.isArray(defaultValue) &&
@@ -155,9 +164,9 @@ const collectObjectDefaultValues = (
 ): void => {
   const objectSchema = asObjectSchema(schema)
   const properties = objectSchema?.properties ?? {}
-  const schemaHasDefault = hasOwnProperty(schema, 'default')
-  const defaultValue = schemaHasDefault
-    ? getSchemaDefault(schema)
+  const schemaHasInitialValue = hasSchemaInitialValue(schema)
+  const defaultValue = schemaHasInitialValue
+    ? getSchemaInitialValue(schema)
     : context.inheritedDefault
   const objectDefault = isJSONSchemaObject(defaultValue)
     ? defaultValue
@@ -198,11 +207,11 @@ const collectSchemaDefaultValues = (
     return
   }
 
-  const schemaHasDefault = hasOwnProperty(schema, 'default')
+  const schemaHasInitialValue = hasSchemaInitialValue(schema)
 
-  if (schemaHasDefault || context.hasInheritedDefault) {
-    const defaultValue = schemaHasDefault
-      ? getSchemaDefault(schema)
+  if (schemaHasInitialValue || context.hasInheritedDefault) {
+    const defaultValue = schemaHasInitialValue
+      ? getSchemaInitialValue(schema)
       : context.inheritedDefault
 
     setDefaultValue(context.defaults, context.pointer, defaultValue)

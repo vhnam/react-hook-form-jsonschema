@@ -19,7 +19,7 @@ import {
 import {
   getArrayItemPointer,
   getListArrayEntries,
-  getListArrayItemPointers,
+  getListArrayItemPointersByIndex,
 } from '../utils/listArrayFormUtils'
 import { getEnumAsStringArray } from '../utils/enumUtils'
 import { ErrorTypes } from '../utils/errorTypes'
@@ -125,13 +125,17 @@ export const buildArrayReturn = (
     }
 
     const formValues = formContext.getValues() as Record<string, unknown>
+    const itemPointersByIndex = getListArrayItemPointersByIndex(
+      formValues,
+      pointer
+    )
     const pointersToClear = new Set<string>()
 
     for (let i = index; i < fieldCount; i += 1) {
       pointersToClear.add(getItemPointer(i))
-      getListArrayItemPointers(formValues, pointer, i).forEach((itemPointer) =>
-        pointersToClear.add(itemPointer)
-      )
+      itemPointersByIndex
+        .get(i)
+        ?.forEach((itemPointer) => pointersToClear.add(itemPointer))
     }
 
     formContext.unregister([...pointersToClear])
@@ -139,7 +143,7 @@ export const buildArrayReturn = (
     for (let i = index; i < fieldCount - 1; i += 1) {
       const sourcePrefix = getItemPointer(i + 1)
       const targetPrefix = getItemPointer(i)
-      const sourcePointers = getListArrayItemPointers(formValues, pointer, i + 1)
+      const sourcePointers = itemPointersByIndex.get(i + 1) ?? []
 
       sourcePointers.forEach((sourcePointer) => {
         const targetPointer = `${targetPrefix}${sourcePointer.slice(

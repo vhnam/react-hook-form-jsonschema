@@ -17,10 +17,7 @@ import {
   useAnnotatedSchemaFromPointer,
   concatFormPointer,
 } from '../JSONSchema/path-handler'
-import {
-  getAnnotatedSchemaFromPointer,
-  getObjectFromForm,
-} from '../JSONSchema/logic'
+import { getAnnotatedSchemaFromPointer } from '../JSONSchema/logic'
 import { getGenericInput } from './useGenericInput'
 import { getInputCustomFields } from './useInput'
 import { getRadioCustomFields } from './useRadio'
@@ -177,8 +174,11 @@ function getStructure(
 
 export const useObject: UseObjectProperties = (props) => {
   const formContext = useFormContext()
-  const { errors } = useFormState({ control: formContext.control })
-  const data = getObjectFromForm(formContext.schema, formContext.getValues())
+  const { errors } = useFormState({
+    control: formContext.control,
+    name: props.pointer === '#' ? undefined : props.pointer,
+  })
+  const data = formContext.getSchemaData(formContext.getValues())
   const childArray = getStructure(
     formContext,
     useAnnotatedSchemaFromPointer(props.pointer, data),

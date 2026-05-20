@@ -7,7 +7,6 @@ import type { JSONFormContextValues } from '../components'
 import { useFormContext } from '../components'
 import type { JSONSubSchemaInfo } from '../JSONSchema'
 import { useAnnotatedSchemaFromPointer } from '../JSONSchema/path-handler'
-import { getObjectFromForm } from '../JSONSchema/logic'
 import { getError } from './validators/getError'
 import { getValidator } from './validators/getGenericValidator'
 import {
@@ -74,7 +73,7 @@ export const useGenericInput: GenericInputParameters = (pointer) => {
     control: formContext.control,
     name: pointer,
   })
-  const data = getObjectFromForm(formContext.schema, formContext.getValues())
+  const data = formContext.getSchemaData(formContext.getValues())
   const subSchemaInfo = useAnnotatedSchemaFromPointer(pointer, data)
 
   return getGenericInput(

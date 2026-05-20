@@ -1,4 +1,8 @@
-import type { BaseSyntheticEvent, HTMLAttributes, PropsWithChildren } from 'react'
+import type {
+  BaseSyntheticEvent,
+  HTMLAttributes,
+  PropsWithChildren,
+} from 'react'
 import type {
   DeepPartial,
   FieldErrors,
@@ -22,11 +26,10 @@ export interface JSONFormContextValues<
   schema: JSONSchemaType
   idMap: IDSchemaPair
   customValidators?: CustomValidators
+  getSchemaData(formValues: FieldValues): JSONObject
 }
 
-export type OnSubmitParameters<
-  FormValues extends FieldValues = FieldValues,
-> = {
+export type OnSubmitParameters<FormValues extends FieldValues = FieldValues> = {
   data: JSONObject
   event: BaseSyntheticEvent | undefined
   methods: JSONFormContextValues<FormValues>

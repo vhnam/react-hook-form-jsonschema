@@ -7,10 +7,11 @@ export const example: ExampleDefinition = {
   id: 'primitives',
   path: '/primitives',
   label: 'Primitives',
-  description: 'useInput — string, integer, number, pattern, nested object',
+  description:
+    'useObject — string, formatted string, integer, number, boolean, nested object',
   title: 'Primitives',
   summary:
-    'useInput for string, integer, and number types, including pattern and multipleOf. Nested object properties are flattened by useObject.',
+    'useObject renders primitive string, integer, number, and boolean fields, including pattern, format, and multipleOf validation. Nested object properties are flattened by useObject.',
   schema,
   Form,
 }

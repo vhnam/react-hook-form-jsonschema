@@ -75,6 +75,43 @@ describe('getArrayValidator', () => {
     expect(validate.items(['archived'])).toBe(ErrorTypes.notInEnum)
   })
 
+  test('validates const item schemas', () => {
+    const itemSchema: JSONSchemaType = {
+      type: 'number',
+      const: 3,
+    }
+    const validate = getValidateMap(
+      getArrayValidator({ type: 'array' }, {}, itemSchema)
+    )
+
+    expect(validate.items(['3'])).toBe(true)
+    expect(validate.items(['4'])).toBe(ErrorTypes.notConst)
+  })
+
+  test('validates structural const item schemas', () => {
+    const itemSchema: JSONSchemaType = {
+      type: 'object',
+      const: { id: 1, status: 'active' },
+    }
+    const validate = getValidateMap(
+      getArrayValidator({ type: 'array' }, {}, itemSchema)
+    )
+
+    expect(validate.items([{ id: 1, status: 'active' }])).toBe(true)
+    expect(validate.items([{ id: 1, status: 'inactive' }])).toBe(
+      ErrorTypes.notConst
+    )
+  })
+
+  test('validates empty const item schemas', () => {
+    const validate = getValidateMap(
+      getArrayValidator({ type: 'array' }, {}, { type: 'string', const: '' })
+    )
+
+    expect(validate.items([''])).toBe(true)
+    expect(validate.items(['draft'])).toBe(ErrorTypes.notConst)
+  })
+
   test('validates string item schemas', () => {
     const itemSchema: JSONSchemaType = {
       type: 'string',

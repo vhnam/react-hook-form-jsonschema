@@ -12,7 +12,7 @@ Try a live demo on [CodeSandbox](https://codesandbox.io/s/react-hook-form-jsonsc
 cd example && pnpm install && pnpm dev
 ```
 
-The local example app includes routes for primitive fields, enums, checkboxes, default values, primitive arrays, object arrays, tuple arrays, and UI schema overrides.
+The local example app includes routes for primitive fields, enums, checkboxes, default values, const values, primitive arrays, object arrays, tuple arrays, and UI schema overrides.
 
 [Supported JSON Schema keywords](#supported-json-schema-keywords)
 
@@ -91,9 +91,9 @@ function PersonForm() {
 }
 ```
 
-Schema `default` values are applied as initial form values and are included in submitted data even when the user does not touch the field.
+Schema `default` values are applied as initial form values and are included in submitted data even when the user does not touch the field. When a schema has `const` and no `default`, the `const` value is used as the initial form value.
 
-See `example/src/modules/` for fuller examples, including default values, `useObject`, `useArray`, and UI schema overrides.
+See `example/src/modules/` for fuller examples, including default values, const values, `useObject`, `useArray`, and UI schema overrides.
 
 ## Installation
 
@@ -174,9 +174,23 @@ The library also exports `useFormContext()` to access the same context value fro
   - `event`: React synthetic event (if available)
   - `methods`: `JSONFormContextValues` — full form context, including react-hook-form methods such as `trigger`, `reset`, and `setValue`
 - `noNativeValidate`: When `true`, sets `noValidate` on the `<form>` so the browser does not block submit. Default: `true`. Native validation is disabled because this library does not implement URI/email `format` validation in HTML5 attributes.
-- `defaultValues`: Initial form values keyed by JSON Pointer. These override any `default` values from the JSON Schema.
+- `defaultValues`: Initial form values keyed by JSON Pointer. These override any `default` or `const`-derived values from the JSON Schema.
 
-`FormContext` derives react-hook-form defaults from the resolved schema's `default` keywords, including primitives, nested object properties, arrays, tuple items, object-array rows, and multi-select checkbox arrays. If either `schema` defaults or explicit `defaultValues` change on rerender, the form resets to the new merged defaults.
+`FormContext` derives react-hook-form defaults from the resolved schema's `default` keywords, including primitives, nested object properties, arrays, tuple items, object-array rows, and multi-select checkbox arrays. If `default` is not present, `const` is used as the initial value. If either schema-derived defaults or explicit `defaultValues` change on rerender, the form resets to the new merged defaults.
+
+`const` validation is enforced for primitive field hooks and array item validators. Object and array `const` constraints are checked against the assembled schema-shaped data before `onSubmit` is called, so invalid const data blocks submission and reports `ErrorTypes.notConst`.
+
+```ts
+const schema = {
+  type: 'object',
+  properties: {
+    environment: {
+      type: 'string',
+      const: 'production',
+    },
+  },
+}
+```
 
 ## Functions API
 
@@ -300,7 +314,8 @@ Every field hook returns a **basic input object** with these common members:
     - `minItems` — `__form_error_minItems__`
     - `maxItems` — `__form_error_maxItems__`
     - `uniqueItems` — `__form_error_uniqueItems__`
-    - `notInEnum` — `__form_error_notInEnum__`
+    - `notInEnum` — `__form_error_notInEnum`
+    - `notConst` — `__form_error_notConst__`
     - `undefinedError` — `__form_error_undefinedError__`
   - Custom validators may set `message` to a plain `string`.
   - **`ErrorMessageValues`**: Expected constraint value (`true` for required, numeric bounds for min/max, etc.).
@@ -793,6 +808,7 @@ function TextAreaField() {
 - `uniqueItems` (list arrays via `useArray`; multi-select via `useCheckbox`)
 - `required`
 - `enum`
+- `const` (field validation; object and array submit validation; also used as a form default when `default` is not provided)
 - `default` (initial form values for primitives, objects, arrays, tuples, object-array rows, and multi-select checkbox arrays)
 - `type` (does not support an array of types)
 - `properties`
@@ -807,7 +823,7 @@ Does **not** fetch a JSON Schema from a remote URI (optional in the spec). Absol
 
 - [x] Improve array type support (and its validation).
 - [x] Apply schema `default` values to the form automatically.
-- [ ] Implement `const`.
+- [x] Implement `const`.
 - [ ] Implement built-in validation for `format` keyword values.
 - [ ] Implement `dependencies` (Draft 07) for conditional fields.
 - [ ] Implement `allOf`, `anyOf`, `oneOf`, and `not` for composite schemas.
