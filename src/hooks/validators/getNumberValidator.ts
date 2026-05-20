@@ -2,7 +2,7 @@ import type { RegisterOptions } from 'react-hook-form'
 
 import { getNumberMaximum, getNumberMinimum } from './numberUtilities'
 import type { JSONSchemaType, NumberJSONSchemaType } from '../../JSONSchema'
-import { ErrorTypes } from './types'
+import { ErrorTypes } from '../../utils/errorTypes'
 
 export const getNumberValidator = (
   currentObject: JSONSchemaType,
@@ -18,11 +18,13 @@ export const getNumberValidator = (
         const numberSchema = currentObject as NumberJSONSchemaType
         const multipleOf = numberSchema.multipleOf
 
-        return (
-          (multipleOf != null &&
-            Number.parseInt(value, 10) % multipleOf === 0) ||
-          ErrorTypes.multipleOf
-        )
+        if (multipleOf == null) {
+          return true
+        }
+
+        return Number.parseInt(value, 10) % multipleOf === 0
+          ? true
+          : ErrorTypes.multipleOf
       }
 
       // TODO: implement float checking with epsilon

@@ -8,7 +8,7 @@ import type {
 } from 'react-hook-form'
 
 import type { JSONSchemaType, IDSchemaPair } from '../../JSONSchema'
-import type { CustomValidators } from '../../hooks/validators'
+import type { CustomValidators } from '../../hooks/validators/types'
 
 export interface JSONFormContextValues<
   FormValues extends FieldValues = FieldValues,

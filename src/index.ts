@@ -13,5 +13,5 @@ export * from './hooks'
 
 export * from './JSONSchema'
 
-export { ErrorTypes } from './hooks/validators/types'
-export type { ErrorMessage, ErrorMessageValues } from './hooks/validators/types'
+export { ErrorTypes } from './utils/errorTypes'
+export type { ErrorMessage, ErrorMessageValues } from './utils/types/errorMessage'

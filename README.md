@@ -115,7 +115,7 @@ pnpm add react-hook-form-jsonschema react-hook-form
 
 **Components:** `FormContext`, `useFormContext`
 
-**Hooks:** `useInput`, `useHidden`, `usePassword`, `useRadio`, `useSelect`, `useTextArea`, `useCheckbox`, `useObject`
+**Hooks:** `useInput`, `useHidden`, `usePassword`, `useRadio`, `useSelect`, `useTextArea`, `useCheckbox`, `useArray`, `useObject`
 
 **Utilities:** `getDataFromPointer`, JSON Schema helpers from `./JSONSchema`
 
@@ -248,11 +248,74 @@ Every field hook returns a **basic input object** with these common members:
 
 **All examples below assume components are rendered as children of `FormContext`.**
 
+### useArray(pointer)
+
+**Description**
+
+Build a dynamic list field for JSON Schema `array` types. Use this for arrays of primitives (e.g. strings) or objects rendered with `useObject` on each `getItemPointer(index)`.
+
+Multi-select arrays (fixed options from `items.enum` or a numeric range) still use `useCheckbox` — `useObject` picks the right hook automatically.
+
+**Parameters:**
+
+- `pointer`: JSON Pointer to the array sub-schema.
+
+**Return:**
+
+Common fields plus:
+
+- `getFields()`: Row metadata (`{ id }`) for React keys.
+- `getItemPointer(index)`: JSON Pointer to one element (e.g. `#/properties/tags/0`).
+- `getItemSchema(index)`: Resolved `items` schema for that row (supports tuple `items` arrays).
+- `getItemInputProps(index)`: Input props for primitive item types.
+- `getItemLabelProps(index)`: Label props for a primitive row.
+- `appendItem()` / `removeItem(index)`: Add or remove rows (`minItems` / `maxItems` respected).
+- `canAdd()` / `canRemove(index)`: Whether add/remove is allowed.
+- `isPrimitiveItem(index)`: `true` when the row can use `getItemInputProps`.
+
+**Example (array of strings):**
+
+```tsx
+function TagsField({ pointer }: { pointer: string }) {
+  const arrayMethods = useArray(pointer)
+
+  return (
+    <>
+      <p>{arrayMethods.getObject().title}</p>
+      {arrayMethods.getFields().map((field, index) => (
+        <div key={field.id}>
+          <input
+            {...arrayMethods.getItemInputProps(index)}
+            aria-label={`item-${index}`}
+          />
+          {arrayMethods.canRemove(index) && (
+            <button
+              type="button"
+              onClick={() => arrayMethods.removeItem(index)}
+            >
+              Remove
+            </button>
+          )}
+        </div>
+      ))}
+      {arrayMethods.canAdd() && (
+        <button type="button" onClick={() => arrayMethods.appendItem()}>
+          Add
+        </button>
+      )}
+      {arrayMethods.getError() && <p>{arrayMethods.getError()?.message}</p>}
+    </>
+  )
+}
+```
+
+**Example (array of objects):** map `getFields()` and render `<ObjectRenderer pointer={arrayMethods.getItemPointer(index)} />` for each row.
+
 ### useCheckbox(pointer)
 
 **Description**
 
-Build a single or multi-option checkbox field.
+Build a single or multi-option checkbox field. For `type: 'array'`, this is used when options are a fixed set (`items.enum` or a bounded numeric range). For open-ended lists, use `useArray`.
 
 **Parameters:**
 
@@ -377,7 +440,7 @@ const uiSchema: UISchemaType = {
 
 **`UITypes`:**
 
-- `default`: Infer control from schema (`string` → input, `enum` → select, `boolean` / `array` → checkbox, etc.)
+- `default`: Infer control from schema (`string` → input, `enum` → select, `boolean` → checkbox, multi-select `array` → checkbox, other `array` → use `useArray` explicitly, etc.)
 - `radio`, `select`, `input`, `hidden`, `password`, `textArea`, `checkbox`: Force the matching hook behavior
 
 Object-typed nodes ignore `type` in the UI schema; their children are always rendered.
@@ -658,9 +721,10 @@ function TextAreaField() {
 - `maxLength`
 - `minLength`
 - `pattern`
-- `items` (does not support an array of schemas)
-- `maxItems` (limited error messaging with `minItems`)
+- `items` (tuple `items` arrays supported via `useArray`; multi-select still uses `items.enum` on a single schema)
+- `maxItems`
 - `minItems`
+- `uniqueItems` (list arrays via `useArray`; multi-select via `useCheckbox`)
 - `required`
 - `enum`
 - `type` (does not support an array of types)
@@ -672,14 +736,23 @@ Does **not** fetch a JSON Schema from a remote URI (optional in the spec). Absol
 
 ## TODO/Next Steps
 
-- [ ] Improve array type support (and its validation).
-- [ ] Implement `dependencies` keyword for dynamic forms.
-- [ ] Implement `allOf`, `anyOf`, `oneOf`, and `not` for richer schemas.
-- [ ] Implement built-in validation for all `format` keyword values.
-- [ ] Maybe? Dedicated hooks per format (e.g. `useDate` for `date-time`).
+### JSON Schema
+
+- [x] Improve array type support (and its validation).
 - [ ] Apply schema `default` values to the form automatically.
-- [ ] Implement `const` keyword.
+- [ ] Implement `const`.
+- [ ] Implement built-in validation for `format` keyword values.
+- [ ] Implement `dependencies` (Draft 07) for conditional fields.
+- [ ] Implement `allOf`, `anyOf`, `oneOf`, and `not` for composite schemas.
+- [ ] Optional: dedicated hooks per `format` (e.g. `useDate` for `date-time`).
 - [ ] Warn when schema keywords are invalid for their declared types.
+- [ ] Per-field error messages for built-in validation; scope customValidators per field.
+
+### Compatibility
+
+- [ ] Official React 19 support (peer deps + test matrix).
+- [ ] TypeScript 6 support (upgrade toolchain, types, and CI).
+- [ ] ESLint 10 support (upgrade lint config and plugins).
 
 ## Useful resources
 

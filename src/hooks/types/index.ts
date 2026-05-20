@@ -1,41 +1,12 @@
 import type { ComponentProps } from 'react'
-import type { RegisterOptions, FieldValues } from 'react-hook-form'
 
-import type { ErrorMessage } from '../validators'
-import type { JSONSchemaType } from '../../JSONSchema'
-import type { JSONFormContextValues } from '../../components'
+import { InputTypes, UITypes } from '../../utils/inputTypes'
+import type { BasicInputReturnType } from '../../utils/types/basicInputTypes'
+import type { UseArrayReturnType } from '../../utils/types/arrayHookTypes'
 
-export enum InputTypes {
-  generic = 'generic',
-  radio = 'radio',
-  select = 'select',
-  input = 'input',
-  textArea = 'textArea',
-  checkbox = 'checkbox',
-}
-
-export enum UITypes {
-  default = 'default',
-  radio = 'radio',
-  select = 'select',
-  input = 'input',
-  hidden = 'hidden',
-  password = 'password',
-  textArea = 'textArea',
-  checkbox = 'checkbox',
-}
-
-export interface BasicInputReturnType {
-  getError(): ErrorMessage
-  getObject(): JSONSchemaType
-  getCurrentValue(): FieldValues
-  formContext: JSONFormContextValues
-  isRequired: boolean
-  name: string
-  type: InputTypes
-  pointer: string
-  validator: RegisterOptions
-}
+export { InputTypes, UITypes } from '../../utils/inputTypes'
+export type { BasicInputReturnType } from '../../utils/types/basicInputTypes'
+export type { UseArrayReturnType, UseArrayParameters } from '../../utils/types/arrayHookTypes'
 
 export interface GenericInputParameters {
   (pointer: string): BasicInputReturnType
@@ -103,6 +74,7 @@ export type InputReturnTypes =
   | UseSelectReturnType
   | UseRadioReturnType
   | UseCheckboxReturnType
+  | UseArrayReturnType
 
 export type UseObjectReturnType = InputReturnTypes[]
 

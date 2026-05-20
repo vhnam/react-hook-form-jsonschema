@@ -1,4 +1,20 @@
-/node_modules/
-/dist/
+# Dependencies
+node_modules/
 
+# Vite
+dist/
+.vite/
+
+# Legacy Rollup bundle (example now uses Vite; index.html loads /src/main.tsx)
+public/build/
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# OS
 .DS_Store

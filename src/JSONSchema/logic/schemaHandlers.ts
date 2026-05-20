@@ -1,5 +1,10 @@
-import type { JSONSchemaType, JSONSubSchemaInfo } from '../types'
+import type {
+  ArrayJSONSchemaType,
+  JSONSchemaType,
+  JSONSubSchemaInfo,
+} from '../types'
 import type { JSONFormContextValues } from '../../components'
+import { isMultiSelectArray } from '../../hooks/arrayUtils'
 import {
   concatFormPointer,
   JSONSchemaRootPointer,
@@ -9,9 +14,37 @@ import {
   asFormDataNode,
   asObjectSchema,
   getSchemaNode,
+  getItemsSchemaForIndex,
   getSchemaProperty,
   isJSONSchemaObject,
 } from './schemaAccess'
+
+const isArrayIndex = (node: string): boolean => /^\d+$/.test(node)
+
+const compactMultiSelectArrayValue = (value: unknown[]): unknown[] =>
+  value.filter(
+    (entry) =>
+      entry !== false &&
+      entry !== undefined &&
+      entry !== null &&
+      entry !== ''
+  )
+
+const maybeCompactMultiSelectValue = (
+  arraySchema: ArrayJSONSchemaType | undefined,
+  value: unknown
+): unknown => {
+  if (
+    arraySchema?.type === 'array' &&
+    arraySchema.uniqueItems === true &&
+    isMultiSelectArray(arraySchema) &&
+    Array.isArray(value)
+  ) {
+    return compactMultiSelectArrayValue(value)
+  }
+
+  return value
+}
 
 const parsers: Record<string, (data: string) => number | boolean> = {
   integer: (data: string): number => parseInt(data, 10),
@@ -41,41 +74,150 @@ export const getObjectFromForm = (
       }
 
       splitPointer.reduce(
-        (currentContext: FormReducerContext, node: string, index: number, src: string[]) => {
-          currentContext.currentSubSchema = currentContext.currentSubSchema
-            ? getSchemaProperty(currentContext.currentSubSchema, node)
-            : undefined
+        (
+          currentContext: FormReducerContext,
+          node: string,
+          index: number,
+          src: string[]
+        ) => {
+          if (
+            isArrayIndex(node) &&
+            currentContext.currentSubSchema?.type === 'array'
+          ) {
+            const arraySchema =
+              currentContext.currentSubSchema as ArrayJSONSchemaType
+            const itemIndex = parseInt(node, 10)
+            const itemsSchema = getItemsSchemaForIndex(arraySchema, itemIndex)
+
+            if (itemsSchema) {
+              currentContext.currentSubSchema = itemsSchema
+            }
+
+            const arrayTarget = currentContext.currentJSON as unknown[]
+
+            if (
+              Array.isArray(arrayTarget) &&
+              arrayTarget[itemIndex] === undefined
+            ) {
+              const initialValue =
+                itemsSchema?.type === 'array'
+                  ? []
+                  : itemsSchema?.type === 'object'
+                    ? {}
+                    : undefined
+
+              if (initialValue !== undefined) {
+                arrayTarget[itemIndex] = initialValue
+              }
+            }
+          } else if (!isArrayIndex(node)) {
+            currentContext.currentSubSchema = currentContext.currentSubSchema
+              ? getSchemaProperty(currentContext.currentSubSchema, node)
+              : undefined
+          }
 
           if (node === 'properties' && !currentContext.insideProperties) {
             return { ...currentContext, insideProperties: true }
           }
 
-          if (index === src.length - 1 && currentContext.currentSubSchema) {
-            const schemaType = currentContext.currentSubSchema.type
+          if (index === src.length - 1) {
+            const arrayItemsSchema =
+              currentContext.currentSubSchema?.type === 'array'
+                ? (
+                    currentContext.currentSubSchema as {
+                      items?: { type?: string }
+                    }
+                  ).items
+                : undefined
+            const itemType =
+              arrayItemsSchema &&
+              !Array.isArray(arrayItemsSchema) &&
+              arrayItemsSchema.type
+                ? arrayItemsSchema.type
+                : currentContext.currentSubSchema?.type
             let parsedValue: unknown = currentContext.targetData ?? {}
 
-            if (
-              typeof schemaType === 'string' &&
-              schemaType in parsers &&
+            if (Array.isArray(fieldValue)) {
+              parsedValue = fieldValue
+            } else if (
+              typeof itemType === 'string' &&
+              itemType in parsers &&
               (typeof fieldValue === 'string' ||
                 typeof fieldValue === 'number' ||
                 typeof fieldValue === 'boolean')
             ) {
-              parsedValue = parsers[schemaType](String(fieldValue))
+              parsedValue = parsers[itemType](String(fieldValue))
+            } else if (
+              !isArrayIndex(node) &&
+              typeof itemType === 'string' &&
+              itemType in parsers
+            ) {
+              parsedValue = fieldValue
+            } else if (isArrayIndex(node)) {
+              parsedValue = fieldValue
             }
 
-            Reflect.set(currentContext.currentJSON, node, parsedValue)
+            if (isArrayIndex(node)) {
+              const arrayTarget = currentContext.currentJSON as unknown[]
+              const itemIndex = parseInt(node, 10)
+
+              if (Array.isArray(arrayTarget)) {
+                const existing = arrayTarget[itemIndex]
+
+                if (
+                  typeof parsedValue === 'object' &&
+                  parsedValue !== null &&
+                  !Array.isArray(parsedValue) &&
+                  typeof existing === 'object' &&
+                  existing !== null &&
+                  !Array.isArray(existing)
+                ) {
+                  arrayTarget[itemIndex] = {
+                    ...(existing as Record<string, unknown>),
+                    ...(parsedValue as Record<string, unknown>),
+                  }
+                } else {
+                  arrayTarget[itemIndex] = parsedValue
+                }
+              }
+            } else if (currentContext.currentSubSchema) {
+              const arraySchema =
+                currentContext.currentSubSchema.type === 'array'
+                  ? (currentContext.currentSubSchema as ArrayJSONSchemaType)
+                  : undefined
+
+              Reflect.set(
+                currentContext.currentJSON,
+                node,
+                maybeCompactMultiSelectValue(arraySchema, parsedValue)
+              )
+            }
           } else if (
             !getSchemaNode(currentContext.currentJSON, node) &&
-            currentContext.currentSubSchema
+            currentContext.currentSubSchema &&
+            !isArrayIndex(node)
           ) {
-            Reflect.set(currentContext.currentJSON, node, {})
+            const childSchema = getSchemaProperty(
+              currentContext.currentSubSchema,
+              node
+            )
+            const initialValue =
+              childSchema?.type === 'array' ||
+              isArrayIndex(src[index + 1] ?? '')
+                ? []
+                : {}
+
+            Reflect.set(currentContext.currentJSON, node, initialValue)
           }
 
-          const nextJson = getSchemaNode(currentContext.currentJSON, node)
-          currentContext.currentJSON = isJSONSchemaObject(nextJson)
+          const nextJson = isArrayIndex(node)
+            ? (currentContext.currentJSON as unknown[])[parseInt(node, 10)]
+            : getSchemaNode(currentContext.currentJSON, node)
+          currentContext.currentJSON = Array.isArray(nextJson)
             ? nextJson
-            : {}
+            : isJSONSchemaObject(nextJson)
+              ? nextJson
+              : {}
 
           return { ...currentContext, insideProperties: false }
         },
@@ -114,6 +256,29 @@ export const getAnnotatedSchemaFromPointer = (
   const info = getSplitPointer(pointer).reduce(
     (currentInfo: ReducerSubSchemaInfo, node: string) => {
       const { JSONSchema, currentData } = currentInfo
+
+      if (isArrayIndex(node) && JSONSchema?.type === 'array') {
+        const nextSchema = getItemsSchemaForIndex(
+          JSONSchema as ArrayJSONSchemaType,
+          parseInt(node, 10)
+        )
+        const newCurrentData = asFormDataNode(
+          currentData ? getSchemaNode(currentData, node) : undefined
+        )
+
+        return {
+          ...currentInfo,
+          JSONSchema: nextSchema,
+          currentData: newCurrentData,
+          fatherExists: !!currentData,
+          isRequired: false,
+          invalidPointer: nextSchema === undefined,
+          objectName: node,
+          pointer: concatFormPointer(currentInfo.pointer, node),
+          insideProperties: false,
+        }
+      }
+
       const objectSchema = JSONSchema ? asObjectSchema(JSONSchema) : undefined
 
       if (!objectSchema && !currentInfo.insideProperties) {
@@ -124,7 +289,11 @@ export const getAnnotatedSchemaFromPointer = (
         }
       }
 
-      if (node === 'properties' && !currentInfo.insideProperties && objectSchema) {
+      if (
+        node === 'properties' &&
+        !currentInfo.insideProperties &&
+        objectSchema
+      ) {
         const fatherIsRequired = currentInfo.isRequired
 
         return {

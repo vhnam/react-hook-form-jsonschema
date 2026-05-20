@@ -1,0 +1,16 @@
+export enum ErrorTypes {
+  required = '__form_error_required__',
+  maxLength = '__form_error_maxLength__',
+  minLength = '__form_error_minLength__',
+  maxValue = '__form_error_maxValue__',
+  minValue = '__form_error_minValue__',
+  pattern = '__form_error_pattern__',
+  notInteger = '__form_error_notInteger__',
+  notFloat = '__form_error_notFloat__',
+  multipleOf = '__form_error_multipleOf__',
+  notInEnum = '__form_error_notInEnum',
+  minItems = '__form_error_minItems__',
+  maxItems = '__form_error_maxItems__',
+  uniqueItems = '__form_error_uniqueItems__',
+  undefinedError = '__form_error_undefinedError__',
+}

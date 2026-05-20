@@ -1,6 +1,6 @@
 import type { ComponentProps } from 'react'
 
-import type { ArrayJSONSchemaType, JSONSchemaType } from '../JSONSchema'
+import type { ArrayJSONSchemaType } from '../JSONSchema'
 import type {
   UseCheckboxParameters,
   BasicInputReturnType,
@@ -8,13 +8,11 @@ import type {
 } from './types'
 import { InputTypes } from './types'
 import {
-  getNumberMaximum,
-  getNumberMinimum,
-  getNumberStep,
-  toFixed,
-} from './validators'
+  getMultiSelectFieldName,
+  getMultiSelectOptions,
+  isMultiSelectArray,
+} from './arrayUtils'
 import { useGenericInput } from './useGenericInput'
-import { getEnumAsStringArray } from './validators/getEnum'
 
 const getItemInputId = (
   path: string,
@@ -32,18 +30,6 @@ const getItemLabelId = (
   return `${path}-checkbox-label-${items[index] ? items[index] : ''}`
 }
 
-const getSingleItemsSchema = (
-  arraySchema: ArrayJSONSchemaType
-): JSONSchemaType | undefined => {
-  const items = arraySchema.items
-
-  if (items == null || Array.isArray(items)) {
-    return undefined
-  }
-
-  return items
-}
-
 export const getCheckboxCustomFields = (
   baseInput: BasicInputReturnType
 ): UseCheckboxReturnType => {
@@ -53,45 +39,20 @@ export const getCheckboxCustomFields = (
   const currentObject = baseInput.getObject()
 
   let items: string[] = []
-  let minimum: number | undefined
-  let maximum: number | undefined
-  let step: number | 'any'
-  let decimalPlaces: number | undefined
 
-  if (currentObject.type === 'array') {
-    const itemSchema = getSingleItemsSchema(currentObject as ArrayJSONSchemaType)
+  const arraySchema =
+    currentObject.type === 'array'
+      ? (currentObject as ArrayJSONSchemaType)
+      : undefined
+  const multiSelect = arraySchema ? isMultiSelectArray(arraySchema) : false
 
-    if (itemSchema) {
-      if (itemSchema.enum) {
-        items = getEnumAsStringArray(itemSchema)
-      } else if (itemSchema.type === 'string') {
-        items = getEnumAsStringArray(currentObject)
-      } else if (
-        itemSchema.type === 'number' ||
-        itemSchema.type === 'integer'
-      ) {
-        const stepAndDecimalPlaces = getNumberStep(currentObject)
-
-        step = stepAndDecimalPlaces[0]
-        decimalPlaces = stepAndDecimalPlaces[1]
-
-        minimum = getNumberMinimum(currentObject)
-        maximum = getNumberMaximum(currentObject)
-
-        if (minimum !== undefined && maximum !== undefined && step != 'any') {
-          for (let i = minimum; i <= maximum; i += step) {
-            items.push(toFixed(i, decimalPlaces || 0))
-          }
-        }
-      }
-    }
-
-    if (currentObject.uniqueItems) {
-      items = [...new Set(items)]
-    }
+  if (arraySchema) {
+    items = getMultiSelectOptions(arraySchema)
   } else if (currentObject.type === 'boolean') {
     items = ['true']
   }
+
+  const fieldValidator = multiSelect ? {} : validator
 
   return {
     ...baseInput,
@@ -100,11 +61,11 @@ export const getCheckboxCustomFields = (
     getItemInputProps: (index) => {
       const name =
         currentObject.type === 'array'
-          ? `${baseInput.pointer}[${index}]`
+          ? getMultiSelectFieldName(baseInput.pointer, index)
           : baseInput.pointer
 
       return {
-        ...register(name, validator),
+        ...register(name, fieldValidator),
         type: 'checkbox',
         id: getItemInputId(baseInput.pointer, index, items),
         value: items[index],
@@ -125,3 +86,5 @@ export const getCheckboxCustomFields = (
 export const useCheckbox: UseCheckboxParameters = (path) => {
   return getCheckboxCustomFields(useGenericInput(path))
 }
+
+export { isMultiSelectArray }
