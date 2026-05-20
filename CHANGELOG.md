@@ -9,15 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `useArray(pointer)` for dynamic list fields (primitives and object rows via `getItemPointer`).
-- Array validation: `minItems`, `maxItems`, `uniqueItems`, and per-item rules for list arrays.
-- `ErrorTypes.minItems`, `ErrorTypes.maxItems`, `ErrorTypes.uniqueItems`.
-- `getObjectFromForm` builds arrays from indexed pointers (e.g. `#/properties/tags/0`).
+- `useArray(pointer)` for JSON Schema array fields, including append/remove helpers, stable row metadata, item pointers, item schemas, item validators, and primitive item props.
+- List array support for primitive rows, object rows rendered through `useObject`, and tuple-style `items` arrays with `additionalItems` handling.
+- Array form data support for indexed JSON Pointers such as `#/properties/tags/0` and nested object rows such as `#/properties/contacts/0/properties/name`.
+- Array validation for `minItems`, `maxItems`, `uniqueItems`, and per-item enum/string/number constraints.
+- `ErrorTypes.minItems`, `ErrorTypes.maxItems`, and `ErrorTypes.uniqueItems`.
+- Public array helpers and types, including `InputTypes.fieldArray`, `UseArrayReturnType`, `getArrayItemPointer`, and `getListArrayEntries`.
+- Example app routes for primitive arrays, object arrays, tuple arrays, checkbox arrays, enums, primitive fields, and UI schema overrides.
 
 ### Changed
 
-- `type: 'array'` in `useObject` only auto-renders as checkboxes for multi-select schemas (`items.enum` or bounded numeric ranges); other arrays use `useArray` explicitly.
+- **BREAKING**: `type: 'array'` in `useObject` only auto-renders as checkboxes for multi-select schemas (`items.enum` or bounded numeric ranges); open-ended list and tuple arrays should be rendered explicitly with `useArray`.
 - `getGenericValidator` applies array rules instead of returning an empty validator for `type: 'array'`.
+- Multi-select checkbox arrays now derive options from shared array helpers and use array-specific error messages for `minItems`, `maxItems`, and `uniqueItems`.
+
+### Fixed
+
+- Multi-select arrays with `uniqueItems: true` compact unchecked checkbox slots before submission, while schemas without `uniqueItems` keep positional checkbox slots.
+- Array item schema traversal now resolves item and nested item pointers correctly when validating, rendering, and submitting arrays.
 
 ## [0.3.0] - 2026-05-19
 

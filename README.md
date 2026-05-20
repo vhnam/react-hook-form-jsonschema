@@ -12,6 +12,8 @@ Try a live demo on [CodeSandbox](https://codesandbox.io/s/react-hook-form-jsonsc
 cd example && pnpm install && pnpm dev
 ```
 
+The local example app includes routes for primitive fields, enums, checkboxes, primitive arrays, object arrays, tuple arrays, and UI schema overrides.
+
 [Supported JSON Schema keywords](#supported-json-schema-keywords)
 
 ## Table of Contents
@@ -25,7 +27,10 @@ cd example && pnpm install && pnpm dev
     - [FormContext component API](#formcontext-component-api)
   - [Functions API](#functions-api)
     - [getDataFromPointer(pointer, data)](#getdatafrompointerpointer-data)
+    - [getArrayItemPointer(arrayPointer, index)](#getarrayitempointerarraypointer-index)
+    - [getListArrayEntries(values, pointer)](#getlistarrayentriesvalues-pointer)
   - [Hooks API](#hooks-api)
+    - [useArray(pointer)](#usearraypointer)
     - [useCheckbox(pointer)](#usecheckboxpointer)
     - [useHidden(pointer)](#usehiddenpointer)
     - [useInput(pointer)](#useinputpointer)
@@ -85,7 +90,7 @@ function PersonForm() {
 }
 ```
 
-See `example/src/main.tsx` for a fuller `useObject` example with UI schema overrides.
+See `example/src/modules/` for fuller examples, including `useObject`, `useArray`, and UI schema overrides.
 
 ## Installation
 
@@ -117,9 +122,9 @@ pnpm add react-hook-form-jsonschema react-hook-form
 
 **Hooks:** `useInput`, `useHidden`, `usePassword`, `useRadio`, `useSelect`, `useTextArea`, `useCheckbox`, `useArray`, `useObject`
 
-**Utilities:** `getDataFromPointer`, JSON Schema helpers from `./JSONSchema`
+**Utilities:** `getDataFromPointer`, `getArrayItemPointer`, `getListArrayEntries`, JSON Schema helpers from `./JSONSchema`
 
-**Types & enums:** `InputTypes`, `UITypes`, `ErrorTypes`, `FormContextProps`, `OnSubmitParameters`, `UISchemaType`, `ObjectJSONSchemaType`, and related hook return types
+**Types & enums:** `InputTypes`, `UITypes`, `ErrorTypes`, `FormContextProps`, `OnSubmitParameters`, `UISchemaType`, `UseArrayReturnType`, `ObjectJSONSchemaType`, and related hook return types
 
 ## Components API
 
@@ -211,6 +216,53 @@ const pointer = '#/properties/address/properties/name'
 getDataFromPointer(pointer, data) // "Foo"
 ```
 
+### getArrayItemPointer(arrayPointer, index)
+
+**Description**
+
+Builds the indexed JSON Pointer used by `useArray` rows.
+
+**Parameters**
+
+- `arrayPointer`: JSON Pointer to the array field.
+- `index`: Zero-based row index.
+
+**Return**
+
+The row pointer as a `string`.
+
+**Example**
+
+```ts
+getArrayItemPointer('#/properties/tags', 0) // "#/properties/tags/0"
+```
+
+### getListArrayEntries(values, pointer)
+
+**Description**
+
+Reads list-array row values from flat react-hook-form values keyed by indexed JSON Pointers.
+
+**Parameters**
+
+- `values`: Current form values.
+- `pointer`: JSON Pointer to the array field.
+
+**Return**
+
+An array of row values sorted by index.
+
+**Example**
+
+```ts
+const values = {
+  '#/properties/tags/0': 'react',
+  '#/properties/tags/1': 'json-schema',
+}
+
+getListArrayEntries(values, '#/properties/tags') // ["react", "json-schema"]
+```
+
 ## Hooks API
 
 Every field hook returns a **basic input object** with these common members:
@@ -222,6 +274,7 @@ Every field hook returns a **basic input object** with these common members:
   - `input`: Generic `<input>`
   - `textArea`: `<textarea>`
   - `checkbox`: `<input type="checkbox">`
+  - `fieldArray`: Dynamic list returned by `useArray` (`InputTypes.fieldArray === 'array'`)
 - `pointer`: JSON Pointer to the sub-schema (e.g. `#/properties/child/properties/here`). See [RFC 6901](https://tools.ietf.org/html/rfc6901).
 - `name`: Last segment of the pointer (`here` in the example above).
 - `isRequired`: Whether the field is required.
@@ -239,6 +292,9 @@ Every field hook returns a **basic input object** with these common members:
     - `notInteger` — `__form_error_notInteger__`
     - `notFloat` — `__form_error_notFloat__`
     - `multipleOf` — `__form_error_multipleOf__`
+    - `minItems` — `__form_error_minItems__`
+    - `maxItems` — `__form_error_maxItems__`
+    - `uniqueItems` — `__form_error_uniqueItems__`
     - `notInEnum` — `__form_error_notInEnum__`
     - `undefinedError` — `__form_error_undefinedError__`
   - Custom validators may set `message` to a plain `string`.
@@ -252,9 +308,11 @@ Every field hook returns a **basic input object** with these common members:
 
 **Description**
 
-Build a dynamic list field for JSON Schema `array` types. Use this for arrays of primitives (e.g. strings) or objects rendered with `useObject` on each `getItemPointer(index)`.
+Build a dynamic list field for JSON Schema `array` types. Use this for arrays of primitives (e.g. strings), object rows rendered with `useObject` on each `getItemPointer(index)`, or tuple-style `items` arrays with `additionalItems` handling.
 
 Multi-select arrays (fixed options from `items.enum` or a numeric range) still use `useCheckbox` — `useObject` picks the right hook automatically.
+
+List arrays store row values at indexed JSON Pointers such as `#/properties/tags/0`; `onSubmit` and `onChange` convert those values back into JSON Schema-shaped arrays.
 
 **Parameters:**
 
@@ -267,9 +325,10 @@ Common fields plus:
 - `getFields()`: Row metadata (`{ id }`) for React keys.
 - `getItemPointer(index)`: JSON Pointer to one element (e.g. `#/properties/tags/0`).
 - `getItemSchema(index)`: Resolved `items` schema for that row (supports tuple `items` arrays).
+- `getItemValidator(index)`: react-hook-form validator for that row’s item schema.
 - `getItemInputProps(index)`: Input props for primitive item types.
 - `getItemLabelProps(index)`: Label props for a primitive row.
-- `appendItem()` / `removeItem(index)`: Add or remove rows (`minItems` / `maxItems` respected).
+- `appendItem()` / `removeItem(index)`: Add or remove rows (`minItems`, `maxItems`, tuple length, and `additionalItems` respected).
 - `canAdd()` / `canRemove(index)`: Whether add/remove is allowed.
 - `isPrimitiveItem(index)`: `true` when the row can use `getItemInputProps`.
 
@@ -418,7 +477,9 @@ function InputField() {
 
 **Description**
 
-Renders all properties of an object sub-schema. Unlike other hooks, `useObject` returns an **array** — one entry per child field, each shaped like the corresponding specialized hook return type.
+Renders supported properties of an object sub-schema. Unlike other hooks, `useObject` returns an **array** — one entry per rendered child field, each shaped like the corresponding specialized hook return type.
+
+Open-ended list and tuple arrays are not auto-rendered by `useObject`; render them explicitly with `useArray`. Multi-select arrays (`items.enum` or bounded numeric ranges) still render through `useCheckbox`.
 
 **Parameters:**
 
@@ -447,7 +508,7 @@ Object-typed nodes ignore `type` in the UI schema; their children are always ren
 
 **Return:**
 
-Array of hook return values (`InputReturnTypes[]`), one per property.
+Array of hook return values (`InputReturnTypes[]`), one per rendered property.
 
 **Example:**
 
