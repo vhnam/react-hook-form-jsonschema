@@ -2,6 +2,7 @@ import {
   getArrayItemPointer,
   getListArrayEntries,
   getListArrayItemPointers,
+  getListArrayItemPointersByIndex,
 } from '../listArrayFormUtils'
 
 describe('list array form utilities', () => {
@@ -20,11 +21,35 @@ describe('list array form utilities', () => {
       '#/properties/other/1': 'ignored',
     }
 
-    expect(getListArrayItemPointers(values, '#/properties/contacts', 1)).toEqual(
-      [
-        '#/properties/contacts/1',
-        '#/properties/contacts/1/properties/email',
-      ]
+    expect(
+      getListArrayItemPointers(values, '#/properties/contacts', 1)
+    ).toEqual([
+      '#/properties/contacts/1',
+      '#/properties/contacts/1/properties/email',
+    ])
+  })
+
+  test('indexes item pointers with a single form value scan', () => {
+    const values = {
+      '#/properties/contacts/1': { name: 'Grace' },
+      '#/properties/contacts/1/properties/email': 'grace@example.com',
+      '#/properties/contacts/0/properties/email': 'ada@example.com',
+      '#/properties/other/1': 'ignored',
+    }
+
+    expect(
+      getListArrayItemPointersByIndex(values, '#/properties/contacts')
+    ).toEqual(
+      new Map([
+        [
+          1,
+          [
+            '#/properties/contacts/1',
+            '#/properties/contacts/1/properties/email',
+          ],
+        ],
+        [0, ['#/properties/contacts/0/properties/email']],
+      ])
     )
   })
 

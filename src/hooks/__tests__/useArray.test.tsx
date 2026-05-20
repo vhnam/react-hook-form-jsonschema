@@ -43,6 +43,18 @@ const tagsSchemaWithItemDefault = {
   },
 }
 
+const tagsSchemaWithConst = {
+  type: 'object',
+  properties: {
+    tags: {
+      type: 'array',
+      title: 'Tags',
+      const: ['react'],
+      items: { type: 'string' },
+    },
+  },
+}
+
 const MockTagsArray = () => {
   const methods = useArray('#/properties/tags')
 
@@ -153,6 +165,22 @@ test('shows minItems error when empty', async () => {
   fireEvent.click(getByText('Submit'))
 
   await waitFor(() => expect(getByText('Array error')).toBeDefined())
+})
+
+test('shows const error when array const value is changed', async () => {
+  const submitHandlerMock = jest.fn()
+  const { getByText, getByLabelText } = render(
+    <FormContext schema={tagsSchemaWithConst} onSubmit={submitHandlerMock}>
+      <MockTagsArray />
+      <input type="submit" value="Submit" />
+    </FormContext>
+  )
+
+  fireEvent.change(getByLabelText('tag-0'), { target: { value: 'vue' } })
+  fireEvent.click(getByText('Submit'))
+
+  await waitFor(() => expect(getByText('Array error')).toBeDefined())
+  expect(submitHandlerMock).not.toHaveBeenCalled()
 })
 
 const tupleCoordsSchema = {
@@ -300,7 +328,10 @@ const MockContactsArray = () => {
     <>
       {methods.getFields().map((field, index) => (
         <div data-testid="contact-row" key={field.id}>
-          <ContactFields index={index} pointer={methods.getItemPointer(index)} />
+          <ContactFields
+            index={index}
+            pointer={methods.getItemPointer(index)}
+          />
           {methods.canRemove(index) && (
             <button type="button" onClick={() => methods.removeItem(index)}>
               Remove contact {index}

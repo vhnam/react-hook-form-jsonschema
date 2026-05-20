@@ -1,4 +1,9 @@
-import type { JSONSchemaType } from '../JSONSchema/types'
+import type {
+  ArrayJSONSchemaType,
+  JSONSchemaType,
+  ObjectJSONSchemaType,
+} from '../JSONSchema/types'
+import { getItemsSchemaForIndex } from '../JSONSchema/logic/schemaAccess'
 
 type SchemaConstValue =
   | boolean
@@ -106,5 +111,91 @@ export const isFormValueEqualToConst = (
   value: unknown,
   schema: JSONSchemaType
 ): boolean => {
-  return areJSONValuesEqual(normalizeFormValueForSchema(value, schema), schema.const)
+  return areJSONValuesEqual(
+    normalizeFormValueForSchema(value, schema),
+    schema.const
+  )
+}
+
+export type SchemaConstValidationError = {
+  pointer: string
+}
+
+const concatSchemaPointer = (pointer: string, node: string): string =>
+  `${pointer}/${node}`
+
+const shouldValidateConst = (
+  value: unknown,
+  schema: JSONSchemaType
+): boolean => {
+  if (!hasSchemaConst(schema) || getSchemaConst(schema) === undefined) {
+    return false
+  }
+
+  if (value === undefined) {
+    return false
+  }
+
+  if (
+    value === '' &&
+    schema.const !== '' &&
+    schema.type !== 'object' &&
+    schema.type !== 'array'
+  ) {
+    return false
+  }
+
+  return true
+}
+
+export const getSchemaConstValidationErrors = (
+  schema: JSONSchemaType,
+  value: unknown,
+  pointer = '#'
+): SchemaConstValidationError[] => {
+  const errors: SchemaConstValidationError[] = []
+
+  if (
+    shouldValidateConst(value, schema) &&
+    !isFormValueEqualToConst(value, schema)
+  ) {
+    errors.push({ pointer })
+  }
+
+  if (schema.type === 'object' && isObjectRecord(value)) {
+    const objectSchema = schema as ObjectJSONSchemaType
+    const properties = objectSchema.properties ?? {}
+
+    Object.keys(properties).forEach((key) => {
+      errors.push(
+        ...getSchemaConstValidationErrors(
+          properties[key],
+          value[key],
+          concatSchemaPointer(concatSchemaPointer(pointer, 'properties'), key)
+        )
+      )
+    })
+  }
+
+  if (schema.type === 'array' && Array.isArray(value)) {
+    const arraySchema = schema as ArrayJSONSchemaType
+
+    value.forEach((entry, index) => {
+      const itemSchema = getItemsSchemaForIndex(arraySchema, index)
+
+      if (!itemSchema) {
+        return
+      }
+
+      errors.push(
+        ...getSchemaConstValidationErrors(
+          itemSchema,
+          entry,
+          concatSchemaPointer(pointer, String(index))
+        )
+      )
+    })
+  }
+
+  return errors
 }

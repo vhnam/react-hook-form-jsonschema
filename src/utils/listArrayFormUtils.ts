@@ -57,13 +57,36 @@ export const getListArrayItemPointers = (
   pointer: string,
   index: number
 ): string[] => {
-  const record = values as Record<string, unknown>
-  const itemPointer = getArrayItemPointer(pointer, index)
-  const childPrefix = `${itemPointer}/`
+  return getListArrayItemPointersByIndex(values, pointer).get(index) ?? []
+}
 
-  return Object.keys(record).filter(
-    (key) => key === itemPointer || key.startsWith(childPrefix)
-  )
+export const getListArrayItemPointersByIndex = (
+  values: object,
+  pointer: string
+): Map<number, string[]> => {
+  const record = values as Record<string, unknown>
+  const prefix = `${pointer}/`
+  const pointersByIndex = new Map<number, string[]>()
+
+  Object.keys(record).forEach((key) => {
+    if (!key.startsWith(prefix)) {
+      return
+    }
+
+    const match = key.slice(prefix.length).match(indexPathPattern)
+
+    if (!match) {
+      return
+    }
+
+    const index = Number(match[1])
+    const pointers = pointersByIndex.get(index) ?? []
+
+    pointers.push(key)
+    pointersByIndex.set(index, pointers)
+  })
+
+  return pointersByIndex
 }
 
 export const getListArrayEntries = (

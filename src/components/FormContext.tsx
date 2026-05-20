@@ -1,5 +1,6 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -15,16 +16,20 @@ import {
   getDefaultValuesFromSchema,
   getObjectFromForm,
 } from '../JSONSchema/logic/schemaHandlers'
-import {
-  getIdSchemaPairs,
-  resolveRefs,
-} from '../JSONSchema/logic/refHandlers'
+import { getIdSchemaPairs, resolveRefs } from '../JSONSchema/logic/refHandlers'
+import { ErrorTypes } from '../utils/errorTypes'
+import { getSchemaConstValidationErrors } from '../utils/constUtils'
 
 type SchemaData = Record<string, unknown>
 type GetSchemaData = (
   schema: JSONSchemaType,
   formValues: Record<string, unknown>
 ) => SchemaData
+type SchemaDataCache = {
+  data: SchemaData
+  schema: JSONSchemaType
+  source: FieldValues
+}
 
 const getSchemaDataFromForm: GetSchemaData = getObjectFromForm
 
@@ -36,9 +41,7 @@ export function useFormContext<
   return useContext(InternalFormContext) as JSONFormContextValues<T>
 }
 
-export const FormContext = <
-  FormValues extends FieldValues = FieldValues,
->(
+export const FormContext = <FormValues extends FieldValues = FieldValues>(
   props: FormContextProps<FormValues>
 ) => {
   const {
@@ -64,7 +67,10 @@ export const FormContext = <
 
   const formDefaultValues = useMemo<DefaultValues<FormValues>>(
     () =>
-      ({ ...schemaDefaultValues, ...defaultValues }) as DefaultValues<FormValues>,
+      ({
+        ...schemaDefaultValues,
+        ...defaultValues,
+      }) as DefaultValues<FormValues>,
     [schemaDefaultValues, defaultValues]
   )
 
@@ -76,9 +82,32 @@ export const FormContext = <
   })
   const { reset } = methods
   const hasMountedRef = useRef(false)
+  const schemaDataCacheRef = useRef<SchemaDataCache | undefined>(undefined)
+  const constErrorPointersRef = useRef<string[]>([])
 
-  const getSchemaData = (formValues: FieldValues): SchemaData =>
-    getSchemaDataFromForm(resolvedSchemaRefs, formValues)
+  const getSchemaData = useCallback(
+    (formValues: FieldValues): SchemaData => {
+      const cached = schemaDataCacheRef.current
+
+      if (
+        cached?.schema === resolvedSchemaRefs &&
+        cached.source === formValues
+      ) {
+        return cached.data
+      }
+
+      const data = getSchemaDataFromForm(resolvedSchemaRefs, formValues)
+
+      schemaDataCacheRef.current = {
+        data,
+        schema: resolvedSchemaRefs,
+        source: formValues,
+      }
+
+      return data
+    },
+    [resolvedSchemaRefs]
+  )
 
   useEffect(() => {
     if (!hasMountedRef.current) {
@@ -100,7 +129,7 @@ export const FormContext = <
     })
 
     return () => subscription.unsubscribe()
-  }, [methods, onChange, resolvedSchemaRefs])
+  }, [getSchemaData, methods, onChange])
 
   const formContext: JSONFormContextValues<FormValues> = useMemo(() => {
     const context = {
@@ -108,6 +137,7 @@ export const FormContext = <
       schema: resolvedSchemaRefs,
       idMap,
       customValidators: props.customValidators,
+      getSchemaData,
     } as JSONFormContextValues<FormValues>
 
     Object.defineProperty(context, 'errors', {
@@ -116,14 +146,39 @@ export const FormContext = <
     })
 
     return context
-  }, [methods, resolvedSchemaRefs, idMap, props.customValidators])
+  }, [
+    getSchemaData,
+    methods,
+    resolvedSchemaRefs,
+    idMap,
+    props.customValidators,
+  ])
 
   const formProps: ComponentProps<'form'> = { ...userFormProps }
 
   const submitHandler = methods.handleSubmit((data, event) => {
+    const schemaData = getSchemaData(data)
+    const constErrors = getSchemaConstValidationErrors(
+      resolvedSchemaRefs,
+      schemaData
+    )
+
+    constErrorPointersRef.current = constErrors.map((error) => error.pointer)
+
+    if (constErrors.length > 0) {
+      constErrors.forEach((error) => {
+        methods.setError(error.pointer as never, {
+          type: 'validate',
+          message: ErrorTypes.notConst,
+        })
+      })
+
+      return
+    }
+
     if (props.onSubmit) {
       void props.onSubmit({
-        data: getSchemaData(data),
+        data: schemaData,
         event,
         methods: formContext,
       })
@@ -131,6 +186,11 @@ export const FormContext = <
   })
 
   formProps.onSubmit = (event) => {
+    if (constErrorPointersRef.current.length > 0) {
+      methods.clearErrors(constErrorPointersRef.current as never)
+      constErrorPointersRef.current = []
+    }
+
     void submitHandler(event)
   }
 

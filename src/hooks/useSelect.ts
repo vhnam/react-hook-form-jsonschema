@@ -6,12 +6,7 @@ import type {
   UseSelectReturnType,
 } from './types'
 import { InputTypes } from './types'
-import {
-  getNumberMaximum,
-  getNumberMinimum,
-  getNumberStep,
-  toFixed,
-} from './validators'
+import { getNumberRangeOptions } from './arrayUtils'
 import { useGenericInput } from './useGenericInput'
 import { getEnumAsStringArray } from './validators/getEnum'
 
@@ -36,10 +31,6 @@ export const getSelectCustomFields = (
   const currentObject = baseInput.getObject()
 
   let items: string[] = ['']
-  let minimum: number | undefined
-  let maximum: number | undefined
-  let step: number | 'any'
-  let decimalPlaces: number | undefined
 
   if (currentObject.type === 'string') {
     items = items.concat(getEnumAsStringArray(currentObject))
@@ -47,19 +38,7 @@ export const getSelectCustomFields = (
     currentObject.type === 'number' ||
     currentObject.type === 'integer'
   ) {
-    const stepAndDecimalPlaces = getNumberStep(currentObject)
-
-    step = stepAndDecimalPlaces[0]
-    decimalPlaces = stepAndDecimalPlaces[1]
-
-    minimum = getNumberMinimum(currentObject)
-    maximum = getNumberMaximum(currentObject)
-
-    if (minimum !== undefined && maximum !== undefined && step != 'any') {
-      for (let i = minimum; i <= maximum; i += step) {
-        items.push(toFixed(i, decimalPlaces || 0))
-      }
-    }
+    items = items.concat(getNumberRangeOptions(currentObject))
   } else if (currentObject.type === 'boolean') {
     items = ['true', 'false']
   }
