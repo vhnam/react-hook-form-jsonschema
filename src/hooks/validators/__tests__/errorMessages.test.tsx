@@ -79,6 +79,37 @@ test('should raise minLength error for an empty optional string', async () => {
   )
 })
 
+test('should raise maxLength error for a maxLength zero string', async () => {
+  const schema = {
+    type: 'object',
+    properties: {
+      emptyOnly: {
+        type: 'string',
+        title: 'Empty Only',
+        maxLength: 0,
+      },
+    },
+  }
+
+  const { getByText, getByLabelText } = render(
+    <FormContext schema={schema} onSubmit={() => {}} noNativeValidate>
+      <MockInput path="#/properties/emptyOnly" />
+      <input type="submit" value="Submit" />
+    </FormContext>
+  )
+
+  fireEvent.change(getByLabelText('Empty Only'), {
+    target: { value: 'x' },
+  })
+  getByText('Submit').click()
+
+  await waitFor(() =>
+    expect(
+      getByText(`This is an error: ${ErrorTypes.maxLength}:0`)
+    ).toBeDefined()
+  )
+})
+
 describe('testing integer boundaries', () => {
   it('should raise error for maximum', async () => {
     const { getByText, getByLabelText } = render(
@@ -162,6 +193,53 @@ describe('testing integer boundaries', () => {
 })
 
 describe('testing float boundaries', () => {
+  it('should submit integer-looking number values', async () => {
+    const submitHandlerMock = jest.fn()
+    const { getByText, getByLabelText } = render(
+      <FormContext
+        schema={mockSchema}
+        onSubmit={submitHandlerMock}
+        noNativeValidate
+      >
+        <MockInput path="#/properties/numberTest" />
+        <input type="submit" value="Submit" />
+      </FormContext>
+    )
+
+    fireEvent.change(getByLabelText('test-useSelectNumber'), {
+      target: { value: 0 },
+    })
+    getByText('Submit').click()
+
+    await waitFor(() =>
+      expect(submitHandlerMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ numberTest: 0 }),
+        })
+      )
+    )
+  })
+
+  it('should raise multipleOf error for decimal numbers', async () => {
+    const { getByText, getByLabelText } = render(
+      <FormContext schema={mockSchema} onSubmit={() => {}} noNativeValidate>
+        <MockInput path="#/properties/numberTest" />
+        <input type="submit" value="Submit" />
+      </FormContext>
+    )
+
+    fireEvent.change(getByLabelText('test-useSelectNumber'), {
+      target: { value: 0.15 },
+    })
+    getByText('Submit').click()
+
+    await waitFor(() =>
+      expect(
+        getByText(`This is an error: ${ErrorTypes.multipleOf}:0.1`)
+      ).toBeDefined()
+    )
+  })
+
   it('should raise error for maximum', async () => {
     const { getByText, getByLabelText } = render(
       <FormContext schema={mockSchema} onSubmit={() => {}} noNativeValidate>

@@ -3,6 +3,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   type ComponentProps,
 } from 'react'
 import type { DefaultValues, FieldValues } from 'react-hook-form'
@@ -73,12 +74,21 @@ export const FormContext = <
     reValidateMode: revalidateMode,
     shouldFocusError: submitFocusError,
   })
+  const { reset } = methods
+  const hasMountedRef = useRef(false)
 
   const getSchemaData = (formValues: FieldValues): SchemaData =>
     getSchemaDataFromForm(resolvedSchemaRefs, formValues)
 
-  // Subscribe to errors so the provider re-renders after validation (RHF proxies formState).
-  const { errors } = methods.formState
+  useEffect(() => {
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true
+
+      return
+    }
+
+    reset(formDefaultValues)
+  }, [formDefaultValues, reset])
 
   useEffect(() => {
     if (typeof onChange !== 'function') {
@@ -93,14 +103,20 @@ export const FormContext = <
   }, [methods, onChange, resolvedSchemaRefs])
 
   const formContext: JSONFormContextValues<FormValues> = useMemo(() => {
-    return {
+    const context = {
       ...methods,
-      errors,
       schema: resolvedSchemaRefs,
       idMap,
       customValidators: props.customValidators,
-    }
-  }, [methods, errors, resolvedSchemaRefs, idMap, props.customValidators])
+    } as JSONFormContextValues<FormValues>
+
+    Object.defineProperty(context, 'errors', {
+      enumerable: true,
+      get: () => methods.formState.errors,
+    })
+
+    return context
+  }, [methods, resolvedSchemaRefs, idMap, props.customValidators])
 
   const formProps: ComponentProps<'form'> = { ...userFormProps }
 

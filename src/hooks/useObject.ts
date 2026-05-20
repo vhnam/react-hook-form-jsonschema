@@ -1,3 +1,6 @@
+import type { FieldError, FieldErrors } from 'react-hook-form'
+import { useFormState } from 'react-hook-form'
+
 import type {
   UseObjectProperties,
   UseObjectReturnType,
@@ -71,7 +74,8 @@ function getChildProperties(
   pointer: string,
   UISchema: UISchemaType | undefined,
   formContext: JSONFormContextValues,
-  data: JSONObject
+  data: JSONObject,
+  errors: FieldErrors
 ) {
   return (allInputs: UseObjectReturnType, key: string) => {
     const newUISchema =
@@ -93,7 +97,8 @@ function getChildProperties(
       currentPointerInfo,
       currentPointer,
       newUISchema,
-      data
+      data,
+      errors
     )
 
     return allInputs.concat(newInput)
@@ -105,18 +110,24 @@ function getStructure(
   pointerInfo: JSONSubSchemaInfo,
   pointer: string,
   UISchema: UISchemaType | undefined,
-  data: JSONObject
+  data: JSONObject,
+  errors: FieldErrors
 ): UseObjectReturnType {
   let inputs: UseObjectReturnType = []
   const { JSONSchema } = pointerInfo
 
-  const genericInput = getGenericInput(formContext, pointerInfo, pointer)
+  const genericInput = getGenericInput(
+    formContext,
+    pointerInfo,
+    pointer,
+    errors[pointer] as FieldError | undefined
+  )
 
   if (JSONSchema.type === 'object') {
     const properties = (JSONSchema as ObjectJSONSchemaType).properties ?? {}
     const objKeys = Object.keys(properties)
     const childInputs = objKeys.reduce(
-      getChildProperties(pointer, UISchema, formContext, data),
+      getChildProperties(pointer, UISchema, formContext, data, errors),
       []
     )
 
@@ -166,13 +177,15 @@ function getStructure(
 
 export const useObject: UseObjectProperties = (props) => {
   const formContext = useFormContext()
+  const { errors } = useFormState({ control: formContext.control })
   const data = getObjectFromForm(formContext.schema, formContext.getValues())
   const childArray = getStructure(
     formContext,
     useAnnotatedSchemaFromPointer(props.pointer, data),
     props.pointer,
     props.UISchema,
-    data
+    data,
+    errors
   )
 
   return childArray

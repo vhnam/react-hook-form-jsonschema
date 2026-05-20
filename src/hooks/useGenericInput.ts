@@ -1,4 +1,5 @@
 import type { FieldError, RegisterOptions } from 'react-hook-form'
+import { useFormState } from 'react-hook-form'
 
 import type { GenericInputParameters, BasicInputReturnType } from './types'
 import { InputTypes } from './types'
@@ -18,7 +19,8 @@ import {
 export const getGenericInput = (
   formContext: JSONFormContextValues,
   subSchemaInfo: JSONSubSchemaInfo,
-  pointer: string
+  pointer: string,
+  fieldError?: FieldError
 ): BasicInputReturnType => {
   const { JSONSchema, isRequired, objectName } = subSchemaInfo
 
@@ -49,9 +51,10 @@ export const getGenericInput = (
     validator,
     getError: () =>
       getError(
-        formContext.errors[pointer]
-          ? (formContext.errors[pointer] as FieldError)
-          : undefined,
+        fieldError ??
+          (formContext.errors[pointer]
+            ? (formContext.errors[pointer] as FieldError)
+            : undefined),
         JSONSchema,
         isRequired,
         formContext,
@@ -67,8 +70,17 @@ export const getGenericInput = (
 
 export const useGenericInput: GenericInputParameters = (pointer) => {
   const formContext = useFormContext()
+  const { errors } = useFormState({
+    control: formContext.control,
+    name: pointer,
+  })
   const data = getObjectFromForm(formContext.schema, formContext.getValues())
   const subSchemaInfo = useAnnotatedSchemaFromPointer(pointer, data)
 
-  return getGenericInput(formContext, subSchemaInfo, pointer)
+  return getGenericInput(
+    formContext,
+    subSchemaInfo,
+    pointer,
+    errors[pointer] as FieldError | undefined
+  )
 }

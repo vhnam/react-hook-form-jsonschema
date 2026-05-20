@@ -66,7 +66,7 @@ export const getStringValidator = (
     }
   }
 
-  if (stringSchema.maxLength) {
+  if (stringSchema.maxLength != null) {
     baseValidator.maxLength = {
       value: stringSchema.maxLength,
       message: ErrorTypes.maxLength,

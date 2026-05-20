@@ -92,7 +92,10 @@ export const getMultiSelectOptions = (
     const maximum = getNumberMaximum(items) ?? getNumberMaximum(arraySchema)
 
     if (minimum !== undefined && maximum !== undefined && step !== 'any') {
-      for (let i = minimum; i <= maximum; i += step) {
+      const tolerance =
+        Number.EPSILON * Math.max(1, Math.abs(maximum), Math.abs(step)) * 100
+
+      for (let i = minimum; i <= maximum + tolerance; i += step) {
         options.push(toFixed(i, decimalPlaces || 0))
       }
     }

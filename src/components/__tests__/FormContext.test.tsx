@@ -151,3 +151,106 @@ test('should let form default values override schema defaults', async () => {
     )
   )
 })
+
+test('should reset values when schema defaults change on rerender', async () => {
+  const submitHandlerMock = jest.fn()
+  const firstSchema = {
+    type: 'object',
+    properties: {
+      firstName: {
+        type: 'string',
+        default: 'Jane',
+      },
+    },
+  }
+  const secondSchema = {
+    type: 'object',
+    properties: {
+      firstName: {
+        type: 'string',
+        default: 'Ada',
+      },
+    },
+  }
+
+  const { getByText, getByLabelText, rerender } = render(
+    <FormContext schema={firstSchema} onSubmit={submitHandlerMock}>
+      <InputRenderer label="First name" pointer="#/properties/firstName" />
+      <input type="submit" value="Submit" />
+    </FormContext>
+  )
+
+  rerender(
+    <FormContext schema={secondSchema} onSubmit={submitHandlerMock}>
+      <InputRenderer label="First name" pointer="#/properties/firstName" />
+      <input type="submit" value="Submit" />
+    </FormContext>
+  )
+
+  await waitFor(() =>
+    expect((getByLabelText('First name') as HTMLInputElement).value).toBe('Ada')
+  )
+
+  fireEvent.click(getByText('Submit'))
+
+  await waitFor(() =>
+    expect(submitHandlerMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: {
+          firstName: 'Ada',
+        },
+      })
+    )
+  )
+})
+
+test('should reset values when defaultValues change on rerender', async () => {
+  const submitHandlerMock = jest.fn()
+  const schema = {
+    type: 'object',
+    properties: {
+      firstName: {
+        type: 'string',
+        default: 'Jane',
+      },
+    },
+  }
+
+  const { getByText, getByLabelText, rerender } = render(
+    <FormContext
+      defaultValues={{ '#/properties/firstName': 'Grace' }}
+      schema={schema}
+      onSubmit={submitHandlerMock}
+    >
+      <InputRenderer label="First name" pointer="#/properties/firstName" />
+      <input type="submit" value="Submit" />
+    </FormContext>
+  )
+
+  rerender(
+    <FormContext
+      defaultValues={{ '#/properties/firstName': 'Ada' }}
+      schema={schema}
+      onSubmit={submitHandlerMock}
+    >
+      <InputRenderer label="First name" pointer="#/properties/firstName" />
+      <input type="submit" value="Submit" />
+    </FormContext>
+  )
+
+  await waitFor(() =>
+    expect((getByLabelText('First name') as HTMLInputElement).value).toBe('Ada')
+  )
+
+  fireEvent.click(getByText('Submit'))
+
+  await waitFor(() =>
+    expect(submitHandlerMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: {
+          firstName: 'Ada',
+        },
+      })
+    )
+  )
+})

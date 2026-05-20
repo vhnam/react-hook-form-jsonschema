@@ -1,6 +1,7 @@
 import { render, waitFor, fireEvent } from '@testing-library/react'
 
 import { useArray } from '../useArray'
+import { useObject } from '../useObject'
 import { FormContext } from '../../components'
 
 const tagsSchema = {
@@ -213,4 +214,192 @@ test('respects maxItems when adding', async () => {
   fireEvent.click(getByText('Add tag'))
   fireEvent.click(getByText('Add tag'))
   await waitFor(() => expect(queryByText('Add tag')).toBeNull())
+})
+
+const contactsSchema = {
+  type: 'object',
+  properties: {
+    contacts: {
+      type: 'array',
+      title: 'Contacts',
+      minItems: 1,
+      items: {
+        type: 'object',
+        properties: {
+          name: { type: 'string', title: 'Name' },
+          email: { type: 'string', title: 'Email' },
+        },
+      },
+    },
+  },
+}
+
+const contactsSchemaWithDefault = {
+  type: 'object',
+  properties: {
+    contacts: {
+      type: 'array',
+      title: 'Contacts',
+      default: [{ name: 'Ada', email: 'ada@example.com' }],
+      items: {
+        type: 'object',
+        properties: {
+          name: { type: 'string', title: 'Name' },
+          email: { type: 'string', title: 'Email' },
+        },
+      },
+    },
+  },
+}
+
+const contactsSchemaMaxOneWithOneDefault = {
+  type: 'object',
+  properties: {
+    contacts: {
+      type: 'array',
+      title: 'Contacts',
+      maxItems: 1,
+      default: [{ name: 'Ada', email: 'ada@example.com' }],
+      items: {
+        type: 'object',
+        properties: {
+          name: { type: 'string', title: 'Name' },
+          email: { type: 'string', title: 'Email' },
+        },
+      },
+    },
+  },
+}
+
+const ContactFields = (props: { index: number; pointer: string }) => {
+  const fields = useObject({ pointer: props.pointer })
+
+  return (
+    <>
+      {fields.map((field) => {
+        if (!('getInputProps' in field)) {
+          return null
+        }
+
+        return (
+          <input
+            aria-label={`${field.name}-${props.index}`}
+            key={field.pointer}
+            {...field.getInputProps()}
+          />
+        )
+      })}
+    </>
+  )
+}
+
+const MockContactsArray = () => {
+  const methods = useArray('#/properties/contacts')
+
+  return (
+    <>
+      {methods.getFields().map((field, index) => (
+        <div data-testid="contact-row" key={field.id}>
+          <ContactFields index={index} pointer={methods.getItemPointer(index)} />
+          {methods.canRemove(index) && (
+            <button type="button" onClick={() => methods.removeItem(index)}>
+              Remove contact {index}
+            </button>
+          )}
+        </div>
+      ))}
+      {methods.canAdd() && (
+        <button type="button" onClick={() => methods.appendItem()}>
+          Add contact
+        </button>
+      )}
+      {methods.getError() && <p>Contacts array error</p>}
+    </>
+  )
+}
+
+test('renders one object-array row for defaults with multiple child fields', () => {
+  const { getAllByTestId, getByLabelText } = render(
+    <FormContext schema={contactsSchemaWithDefault}>
+      <MockContactsArray />
+    </FormContext>
+  )
+
+  expect(getAllByTestId('contact-row')).toHaveLength(1)
+  expect((getByLabelText('name-0') as HTMLInputElement).value).toBe('Ada')
+  expect((getByLabelText('email-0') as HTMLInputElement).value).toBe(
+    'ada@example.com'
+  )
+})
+
+test('appends and removes object-array rows without leaving stale child fields', async () => {
+  let submitted: { contacts?: Array<{ name?: string; email?: string }> } = {}
+
+  const { getByText, getByLabelText, queryByLabelText } = render(
+    <FormContext
+      schema={contactsSchema}
+      onSubmit={({ data }) => {
+        submitted = data as {
+          contacts?: Array<{ name?: string; email?: string }>
+        }
+      }}
+    >
+      <MockContactsArray />
+      <input type="submit" value="Submit" />
+    </FormContext>
+  )
+
+  fireEvent.change(getByLabelText('name-0'), { target: { value: 'Ada' } })
+  fireEvent.change(getByLabelText('email-0'), {
+    target: { value: 'ada@example.com' },
+  })
+  fireEvent.click(getByText('Add contact'))
+
+  await waitFor(() => expect(getByLabelText('name-1')).toBeDefined())
+
+  fireEvent.change(getByLabelText('name-1'), { target: { value: 'Grace' } })
+  fireEvent.change(getByLabelText('email-1'), {
+    target: { value: 'grace@example.com' },
+  })
+  fireEvent.click(getByText('Remove contact 0'))
+
+  await waitFor(() => expect(queryByLabelText('name-1')).toBeNull())
+  expect((getByLabelText('name-0') as HTMLInputElement).value).toBe('Grace')
+  expect((getByLabelText('email-0') as HTMLInputElement).value).toBe(
+    'grace@example.com'
+  )
+
+  fireEvent.click(getByText('Submit'))
+
+  await waitFor(() =>
+    expect(submitted.contacts).toEqual([
+      { email: 'grace@example.com', name: 'Grace' },
+    ])
+  )
+})
+
+test('checks array constraints using object item count, not child field count', async () => {
+  let submitted: { contacts?: Array<{ name?: string; email?: string }> } = {}
+  const { getByText, queryByText } = render(
+    <FormContext
+      schema={contactsSchemaMaxOneWithOneDefault}
+      onSubmit={({ data }) => {
+        submitted = data as {
+          contacts?: Array<{ name?: string; email?: string }>
+        }
+      }}
+    >
+      <MockContactsArray />
+      <input type="submit" value="Submit" />
+    </FormContext>
+  )
+
+  fireEvent.click(getByText('Submit'))
+
+  await waitFor(() =>
+    expect(submitted.contacts).toEqual([
+      { email: 'ada@example.com', name: 'Ada' },
+    ])
+  )
+  expect(queryByText('Contacts array error')).toBeNull()
 })
