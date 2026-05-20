@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Built-in JSON Schema `format` validation for the official Draft 2020-12 section 7.3 string formats, including email, hostname, IP address, URI/IRI, UUID, JSON Pointer, URI Template, duration, date/time, and regex checks.
+- Tiered form-builder behavior for `format`: native widgets for `date`, `time`, `date-time`, `email`, and `uri`; text inputs with validation for UUID/IP/hostname formats; and text validation for API/config-oriented formats.
+- `ErrorTypes.format` with error metadata that reports the expected schema `format`.
+- Example app route for tiered `format` validation.
+
+### Changed
+
+- `useInput` maps `format: "time"` to `<input type="time">` and keeps `format: "hostname"` as a text input instead of a URL input.
+- `date-time` and `time` validation accepts browser-native `datetime-local` and `time` input values in addition to RFC 3339 values.
+- `FormContext` skips resetting form state when rerendered schema-derived defaults or explicit `defaultValues` are semantically unchanged.
+
+### Fixed
+
+- `useArray` row rendering stays synchronized when schema/default changes reset array values to a different length.
+
 ## [0.4.0] - 2026-05-20
 
 ### Added

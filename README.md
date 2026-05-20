@@ -12,7 +12,7 @@ Try a live demo on [CodeSandbox](https://codesandbox.io/s/react-hook-form-jsonsc
 cd example && pnpm install && pnpm dev
 ```
 
-The local example app includes routes for primitive fields, enums, checkboxes, default values, const values, primitive arrays, object arrays, tuple arrays, and UI schema overrides.
+The local example app includes routes for primitive fields, enums, checkboxes, default values, const values, tiered `format` validation, primitive arrays, object arrays, tuple arrays, and UI schema overrides.
 
 [Supported JSON Schema keywords](#supported-json-schema-keywords)
 
@@ -93,7 +93,7 @@ function PersonForm() {
 
 Schema `default` values are applied as initial form values and are included in submitted data even when the user does not touch the field. When a schema has `const` and no `default`, the `const` value is used as the initial form value.
 
-See `example/src/modules/` for fuller examples, including default values, const values, `useObject`, `useArray`, and UI schema overrides.
+See `example/src/modules/` for fuller examples, including default values, const values, `format` validation, `useObject`, `useArray`, and UI schema overrides.
 
 ## Installation
 
@@ -173,12 +173,54 @@ The library also exports `useFormContext()` to access the same context value fro
   - `data`: Form values formatted as a JSON Schema instance
   - `event`: React synthetic event (if available)
   - `methods`: `JSONFormContextValues` — full form context, including react-hook-form methods such as `trigger`, `reset`, and `setValue`
-- `noNativeValidate`: When `true`, sets `noValidate` on the `<form>` so the browser does not block submit. Default: `true`. Native validation is disabled because this library does not implement URI/email `format` validation in HTML5 attributes.
+- `noNativeValidate`: When `true`, sets `noValidate` on the `<form>` so the browser does not block submit. Default: `true`. Native validation is disabled so react-hook-form owns all schema-derived validation, including JSON Schema `format` checks.
 - `defaultValues`: Initial form values keyed by JSON Pointer. These override any `default` or `const`-derived values from the JSON Schema.
 
-`FormContext` derives react-hook-form defaults from the resolved schema's `default` keywords, including primitives, nested object properties, arrays, tuple items, object-array rows, and multi-select checkbox arrays. If `default` is not present, `const` is used as the initial value. If either schema-derived defaults or explicit `defaultValues` change on rerender, the form resets to the new merged defaults.
+`FormContext` derives react-hook-form defaults from the resolved schema's `default` keywords, including primitives, nested object properties, arrays, tuple items, object-array rows, and multi-select checkbox arrays. If `default` is not present, `const` is used as the initial value. If schema-derived defaults or explicit `defaultValues` semantically change on rerender, the form resets to the new merged defaults; equivalent object identities do not reset in-progress edits.
 
 `const` validation is enforced for primitive field hooks and array item validators. Object and array `const` constraints are checked against the assembled schema-shaped data before `onSubmit` is called, so invalid const data blocks submission and reports `ErrorTypes.notConst`.
+
+`format` validation is enforced for supported string formats using best-effort syntactic checks based on JSON Schema Draft 2020-12 section 7.3. Supported formats are grouped by form-builder usefulness:
+
+- **Tier 1 — native input widgets:** `date`, `time`, `date-time`, `email`, and `uri`. These map to `date`, `time`, `datetime-local`, `email`, and `url` inputs. For `time` and `date-time`, browser-native local values are accepted in addition to RFC 3339 values.
+- **Tier 2 — text inputs with useful validation:** `uuid`, `ipv4`, `ipv6`, and `hostname`.
+- **Tier 3 — text inputs for API/config schemas:** `duration`, `idn-email`, `idn-hostname`, `iri`, `iri-reference`, `uri-reference`, `uri-template`, `json-pointer`, `relative-json-pointer`, and `regex`.
+
+Unknown formats are treated as annotations and do not fail validation. Use `customValidators` for project-specific formats such as `phone`, `color`, or `password`, and document those as custom extensions.
+
+```ts
+const schema = {
+  type: 'object',
+  properties: {
+    email: {
+      type: 'string',
+      title: 'Email',
+      format: 'email',
+    },
+    website: {
+      type: 'string',
+      title: 'Website',
+      format: 'uri',
+    },
+    startDate: {
+      type: 'string',
+      title: 'Start date',
+      format: 'date',
+    },
+    requestId: {
+      type: 'string',
+      title: 'Request ID',
+      format: 'uuid',
+    },
+    configPointer: {
+      type: 'string',
+      title: 'Config pointer',
+      format: 'json-pointer',
+    },
+  },
+  required: ['email'],
+}
+```
 
 ```ts
 const schema = {
@@ -463,7 +505,17 @@ function HiddenField() {
 
 **Description**
 
-Generic text/number input with validation derived from the schema `type` and constraints.
+Generic input with validation derived from the schema `type`, constraints, and supported `format` values.
+
+For string schemas, `useInput` maps Tier 1 formats to native input widgets:
+
+- `date` -> `type="date"`
+- `time` -> `type="time"`
+- `date-time` -> `type="datetime-local"`
+- `email` -> `type="email"`
+- `uri` -> `type="url"`
+
+Other supported formats, such as `uuid`, `ipv4`, `ipv6`, `hostname`, `json-pointer`, and `regex`, remain `type="text"` and use react-hook-form validation.
 
 **Parameters:**
 
@@ -809,6 +861,7 @@ function TextAreaField() {
 - `required`
 - `enum`
 - `const` (field validation; object and array submit validation; also used as a form default when `default` is not provided)
+- `format` (best-effort syntactic validation for the formats defined in JSON Schema Draft 2020-12 section 7.3; Tier 1 formats also map to native input widgets)
 - `default` (initial form values for primitives, objects, arrays, tuples, object-array rows, and multi-select checkbox arrays)
 - `type` (does not support an array of types)
 - `properties`
@@ -824,7 +877,7 @@ Does **not** fetch a JSON Schema from a remote URI (optional in the spec). Absol
 - [x] Improve array type support (and its validation).
 - [x] Apply schema `default` values to the form automatically.
 - [x] Implement `const`.
-- [ ] Implement built-in validation for `format` keyword values.
+- [x] Implement built-in validation for `format` keyword values.
 - [ ] Implement `dependencies` (Draft 07) for conditional fields.
 - [ ] Implement `allOf`, `anyOf`, `oneOf`, and `not` for composite schemas.
 - [ ] Optional: dedicated hooks per `format` (e.g. `useDate` for `date-time`).
