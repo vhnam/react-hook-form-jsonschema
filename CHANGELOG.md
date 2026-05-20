@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-05-21
+
 ### Added
 
 - Built-in JSON Schema `format` validation for the official Draft 2020-12 section 7.3 string formats, including email, hostname, IP address, URI/IRI, UUID, JSON Pointer, URI Template, duration, date/time, and regex checks.
