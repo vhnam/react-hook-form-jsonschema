@@ -92,6 +92,84 @@ test('should collect schema defaults as form default values', () => {
   })
 })
 
+test('should collect schema const values as form default values', () => {
+  const mockJSONSchema = {
+    type: 'object',
+    properties: {
+      role: {
+        type: 'string',
+        const: 'admin',
+      },
+      age: {
+        type: 'integer',
+        const: 32,
+      },
+      address: {
+        type: 'object',
+        const: {
+          city: 'RJ',
+        },
+        properties: {
+          city: {
+            type: 'string',
+          },
+          country: {
+            type: 'string',
+            default: 'BR',
+          },
+        },
+      },
+      tags: {
+        type: 'array',
+        const: ['react', 'hooks'],
+        items: { type: 'string' },
+      },
+    },
+  }
+
+  expect(getDefaultValuesFromSchema(mockJSONSchema)).toEqual({
+    '#/properties/address/properties/city': 'RJ',
+    '#/properties/address/properties/country': 'BR',
+    '#/properties/age': 32,
+    '#/properties/role': 'admin',
+    '#/properties/tags': ['react', 'hooks'],
+    '#/properties/tags/0': 'react',
+    '#/properties/tags/1': 'hooks',
+  })
+})
+
+test('should prefer schema default over const as form default values', () => {
+  const mockJSONSchema = {
+    type: 'object',
+    properties: {
+      role: {
+        type: 'string',
+        const: 'admin',
+        default: 'user',
+      },
+      profile: {
+        type: 'object',
+        const: {
+          status: 'locked',
+        },
+        default: {
+          status: 'draft',
+        },
+        properties: {
+          status: {
+            type: 'string',
+          },
+        },
+      },
+    },
+  }
+
+  expect(getDefaultValuesFromSchema(mockJSONSchema)).toEqual({
+    '#/properties/profile/properties/status': 'draft',
+    '#/properties/role': 'user',
+  })
+})
+
 test('should collect array defaults as indexed form values', () => {
   const mockJSONSchema = {
     type: 'object',

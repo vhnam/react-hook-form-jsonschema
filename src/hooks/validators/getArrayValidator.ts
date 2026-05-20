@@ -8,13 +8,29 @@ import type {
 import { normalizeArrayValue } from '../arrayUtils'
 import { ErrorTypes } from '../../utils/errorTypes'
 import { getNumberValidator } from './getNumberValidator'
+import {
+  getSchemaConst,
+  hasSchemaConst,
+  isFormValueEqualToConst,
+} from '../../utils/constUtils'
 
 const validateItemValue = (
   value: unknown,
   itemSchema: JSONSchemaType
 ): string | true => {
   if (value === undefined || value === null || value === '') {
-    return true
+    if (
+      hasSchemaConst(itemSchema) &&
+      Object.is(getSchemaConst(itemSchema), value)
+    ) {
+      return true
+    }
+
+    return hasSchemaConst(itemSchema) ? ErrorTypes.notConst : true
+  }
+
+  if (hasSchemaConst(itemSchema)) {
+    return isFormValueEqualToConst(value, itemSchema) || ErrorTypes.notConst
   }
 
   if (

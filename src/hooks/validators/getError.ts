@@ -3,10 +3,9 @@ import type { FieldError } from 'react-hook-form'
 import type { JSONFormContextValues } from '../../components'
 import type {
   ArrayJSONSchemaType,
-  BasicJSONSchemaType,
   JSONSchemaType,
   StringJSONSchemaType,
-} from '../../JSONSchema'
+} from '../../JSONSchema/types'
 import {
   getMultiSelectFieldName,
   getMultiSelectOptions,
@@ -16,6 +15,7 @@ import {
 import { getListArrayEntries } from '../../utils/listArrayFormUtils'
 import type { ErrorMessage } from './types'
 import { ErrorTypes } from '../../utils/errorTypes'
+import { getSchemaConst } from '../../utils/constUtils'
 
 const countMultiSelectChecked = (
   formContext: JSONFormContextValues,
@@ -120,7 +120,6 @@ export const getError = (
   }
 
   const stringSchema = currentObject as StringJSONSchemaType
-  const schemaWithEnum = currentObject as BasicJSONSchemaType
 
   const retError: ErrorMessage = {
     message:
@@ -168,8 +167,14 @@ export const getError = (
 
     case ErrorTypes.notInEnum:
       retError.message = ErrorTypes.notInEnum
-      retError.expected = schemaWithEnum.enum
+      retError.expected = currentObject.enum
       break
+
+    case ErrorTypes.notConst:
+      return {
+        message: errors.message,
+        expected: getSchemaConst(currentObject),
+      }
 
     case ErrorTypes.minItems:
       retError.message = ErrorTypes.minItems

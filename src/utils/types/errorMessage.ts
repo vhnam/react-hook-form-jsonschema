@@ -1,14 +1,8 @@
-import type {
-  JSONSchemaBaseInstanceTypes,
-  JSONSchemaType,
-} from '../../JSONSchema'
+import type { JSONValue } from '../../JSONSchema'
 
 import { ErrorTypes } from '../errorTypes'
 
-export type ErrorMessageValues =
-  | JSONSchemaType['enum']
-  | JSONSchemaBaseInstanceTypes
-  | undefined
+export type ErrorMessageValues = JSONValue | undefined
 
 export type ErrorMessage =
   | {

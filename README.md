@@ -793,6 +793,7 @@ function TextAreaField() {
 - `uniqueItems` (list arrays via `useArray`; multi-select via `useCheckbox`)
 - `required`
 - `enum`
+- `const` (also used as a form default when `default` is not provided)
 - `default` (initial form values for primitives, objects, arrays, tuples, object-array rows, and multi-select checkbox arrays)
 - `type` (does not support an array of types)
 - `properties`
@@ -807,7 +808,7 @@ Does **not** fetch a JSON Schema from a remote URI (optional in the spec). Absol
 
 - [x] Improve array type support (and its validation).
 - [x] Apply schema `default` values to the form automatically.
-- [ ] Implement `const`.
+- [x] Implement `const`.
 - [ ] Implement built-in validation for `format` keyword values.
 - [ ] Implement `dependencies` (Draft 07) for conditional fields.
 - [ ] Implement `allOf`, `anyOf`, `oneOf`, and `not` for composite schemas.
