@@ -2,6 +2,10 @@ import type { RegisterOptions } from 'react-hook-form'
 
 import type { JSONSchemaType, StringJSONSchemaType } from '../../JSONSchema'
 import { ErrorTypes } from '../../utils/errorTypes'
+import {
+  getFormatValidationResult,
+  isSupportedFormat,
+} from './getFormatValidator'
 
 type ValidatorResult = string | string[] | boolean | undefined
 type MaybePromiseValidatorResult = ValidatorResult | Promise<ValidatorResult>
@@ -35,6 +39,29 @@ const runExistingValidate = (
   return true
 }
 
+const appendValidate = (
+  baseValidator: RegisterOptions,
+  validateNext: (value: unknown) => ValidatorResult
+): void => {
+  const currentValidate = baseValidator.validate
+
+  baseValidator.validate = (value: unknown) => {
+    const existingResult = runExistingValidate(currentValidate, value)
+
+    if (existingResult instanceof Promise) {
+      return existingResult.then((result) =>
+        result === true ? validateNext(value) : result
+      )
+    }
+
+    if (existingResult !== true) {
+      return existingResult
+    }
+
+    return validateNext(value)
+  }
+}
+
 export const getStringValidator = (
   currentObject: JSONSchemaType,
   baseValidator: RegisterOptions
@@ -43,27 +70,12 @@ export const getStringValidator = (
 
   if (stringSchema.minLength != null) {
     const minLength = stringSchema.minLength
-    const currentValidate = baseValidator.validate
 
     baseValidator.minLength = {
       value: minLength,
       message: ErrorTypes.minLength,
     }
-    baseValidator.validate = (value: unknown) => {
-      const existingResult = runExistingValidate(currentValidate, value)
-
-      if (existingResult instanceof Promise) {
-        return existingResult.then((result) =>
-          result === true ? getMinLengthResult(value, minLength) : result
-        )
-      }
-
-      if (existingResult !== true) {
-        return existingResult
-      }
-
-      return getMinLengthResult(value, minLength)
-    }
+    appendValidate(baseValidator, (value) => getMinLengthResult(value, minLength))
   }
 
   if (stringSchema.maxLength != null) {
@@ -78,6 +90,14 @@ export const getStringValidator = (
       value: new RegExp(stringSchema.pattern),
       message: ErrorTypes.pattern,
     }
+  }
+
+  if (stringSchema.format && isSupportedFormat(stringSchema.format)) {
+    const { format } = stringSchema
+
+    appendValidate(baseValidator, (value) =>
+      getFormatValidationResult(value, format)
+    )
   }
 
   return baseValidator

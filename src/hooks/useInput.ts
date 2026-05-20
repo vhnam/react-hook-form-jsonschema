@@ -23,12 +23,12 @@ export const getInputCustomFields = (
         inputType = 'datetime-local'
         break
 
-      case 'email':
-        inputType = 'email'
+      case 'time':
+        inputType = 'time'
         break
 
-      case 'hostname':
-        inputType = 'url'
+      case 'email':
+        inputType = 'email'
         break
 
       case 'uri':

@@ -1,11 +1,31 @@
 import type { JSONSchemaType } from '../../JSONSchema/types'
 import {
+  areJSONValuesEqual,
   getSchemaConst,
   hasSchemaConst,
   isFormValueEqualToConst,
 } from '../constUtils'
 
 describe('constUtils', () => {
+  test('compares JSON values structurally', () => {
+    expect(
+      areJSONValuesEqual(
+        {
+          profile: { role: 'admin' },
+          tags: ['react', 'json-schema'],
+        },
+        {
+          tags: ['react', 'json-schema'],
+          profile: { role: 'admin' },
+        }
+      )
+    ).toBe(true)
+    expect(areJSONValuesEqual(['react'], ['json-schema'])).toBe(false)
+    expect(areJSONValuesEqual({ tags: ['react'] }, { tags: ['react', 'ts'] })).toBe(
+      false
+    )
+  })
+
   test('detects const even when the value is falsey', () => {
     expect(hasSchemaConst({ type: 'boolean', const: false })).toBe(true)
     expect(hasSchemaConst({ type: 'string', const: '' })).toBe(true)

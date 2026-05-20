@@ -69,7 +69,7 @@ const normalizeFormValueForSchema = (
   return value
 }
 
-const areJSONValuesEqual = (left: unknown, right: unknown): boolean => {
+export const areJSONValuesEqual = (left: unknown, right: unknown): boolean => {
   if (Object.is(left, right)) {
     return true
   }

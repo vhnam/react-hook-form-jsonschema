@@ -5,6 +5,7 @@ export enum ErrorTypes {
   maxValue = '__form_error_maxValue__',
   minValue = '__form_error_minValue__',
   pattern = '__form_error_pattern__',
+  format = '__form_error_format__',
   notInteger = '__form_error_notInteger__',
   notFloat = '__form_error_notFloat__',
   multipleOf = '__form_error_multipleOf__',

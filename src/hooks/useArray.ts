@@ -1,4 +1,4 @@
-import type { ComponentProps } from 'react'
+import type { ComponentProps, MutableRefObject } from 'react'
 import { useEffect, useRef, useState } from 'react'
 
 import type { ArrayJSONSchemaType, JSONSchemaType } from '../JSONSchema'
@@ -36,10 +36,24 @@ const getItemLabelId = (itemPointer: string): string => {
   return `${itemPointer}-array-item-label`
 }
 
+const getArrayFieldCount = (
+  values: object,
+  pointer: string,
+  arraySchema: ArrayJSONSchemaType,
+  tupleLength: number
+): number => {
+  return Math.max(
+    getListArrayEntries(values, pointer).length,
+    arraySchema.minItems ?? 0,
+    tupleLength
+  )
+}
+
 export const buildArrayReturn = (
   baseInput: BasicInputReturnType,
   fieldCount: number,
-  setFieldCount: (count: number | ((prev: number) => number)) => void
+  setFieldCount: (count: number | ((prev: number) => number)) => void,
+  fieldCountSyncDisabledRef?: MutableRefObject<boolean>
 ): UseArrayReturnType => {
   const { formContext, pointer, validator } = baseInput
   const arraySchema = baseInput.getObject() as ArrayJSONSchemaType
@@ -109,6 +123,9 @@ export const buildArrayReturn = (
       return
     }
 
+    if (fieldCountSyncDisabledRef) {
+      fieldCountSyncDisabledRef.current = true
+    }
     const nextIndex = fieldCount
     const itemPointer = getItemPointer(nextIndex)
     const defaultValue = getDefaultItemValue(getItemSchema(nextIndex))
@@ -117,6 +134,11 @@ export const buildArrayReturn = (
       shouldValidate: false,
     })
     setFieldCount((count) => count + 1)
+    queueMicrotask(() => {
+      if (fieldCountSyncDisabledRef) {
+        fieldCountSyncDisabledRef.current = false
+      }
+    })
   }
 
   const removeItem = (index: number): void => {
@@ -124,6 +146,9 @@ export const buildArrayReturn = (
       return
     }
 
+    if (fieldCountSyncDisabledRef) {
+      fieldCountSyncDisabledRef.current = true
+    }
     const formValues = formContext.getValues() as Record<string, unknown>
     const itemPointersByIndex = getListArrayItemPointersByIndex(
       formValues,
@@ -157,6 +182,11 @@ export const buildArrayReturn = (
     }
 
     setFieldCount((count) => count - 1)
+    queueMicrotask(() => {
+      if (fieldCountSyncDisabledRef) {
+        fieldCountSyncDisabledRef.current = false
+      }
+    })
   }
 
   const isPrimitiveItem = (index: number): boolean => {
@@ -270,18 +300,53 @@ export const buildArrayReturn = (
 export const useArray: UseArrayParameters = (pointer: string) => {
   const baseInput = useGenericInput(pointer)
   const { formContext } = baseInput
-  const { getValues, register, unregister } = formContext
+  const { getValues, register, unregister, watch } = formContext
   const arraySchema = baseInput.getObject() as ArrayJSONSchemaType
   const tupleLength = getTupleItemsLength(arraySchema)
-  const initialCount = Math.max(
-    getListArrayEntries(getValues(), pointer).length,
-    arraySchema.minItems ?? 0,
+  const initialCount = getArrayFieldCount(
+    getValues(),
+    pointer,
+    arraySchema,
     tupleLength
   )
   const [fieldCount, setFieldCount] = useState(initialCount)
   const fieldCountRef = useRef(fieldCount)
+  const fieldCountSyncDisabledRef = useRef(false)
 
   fieldCountRef.current = fieldCount
+
+  useEffect(() => {
+    const syncFieldCount = (values: object): void => {
+      const nextCount = getArrayFieldCount(
+        values,
+        pointer,
+        arraySchema,
+        tupleLength
+      )
+
+      setFieldCount((count) => (count === nextCount ? count : nextCount))
+    }
+
+    syncFieldCount(getValues())
+
+    const subscription = watch((values, { name }) => {
+      if (name === undefined) {
+        if (fieldCountSyncDisabledRef.current) {
+          return
+        }
+
+        syncFieldCount(values)
+      }
+    })
+
+    return () => subscription.unsubscribe()
+  }, [
+    arraySchema,
+    getValues,
+    pointer,
+    tupleLength,
+    watch,
+  ])
 
   useEffect(() => {
     const minItems = Math.max(
@@ -326,5 +391,10 @@ export const useArray: UseArrayParameters = (pointer: string) => {
     unregister,
   ])
 
-  return buildArrayReturn(baseInput, fieldCount, setFieldCount)
+  return buildArrayReturn(
+    baseInput,
+    fieldCount,
+    setFieldCount,
+    fieldCountSyncDisabledRef
+  )
 }

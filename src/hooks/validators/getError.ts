@@ -165,6 +165,11 @@ export const getError = (
       retError.expected = stringSchema.pattern
       break
 
+    case ErrorTypes.format:
+      retError.message = ErrorTypes.format
+      retError.expected = stringSchema.format
+      break
+
     case ErrorTypes.notInEnum:
       retError.message = ErrorTypes.notInEnum
       retError.expected = currentObject.enum
