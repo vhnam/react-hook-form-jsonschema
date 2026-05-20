@@ -12,7 +12,7 @@ Try a live demo on [CodeSandbox](https://codesandbox.io/s/react-hook-form-jsonsc
 cd example && pnpm install && pnpm dev
 ```
 
-The local example app includes routes for primitive fields, enums, checkboxes, default values, const values, tiered `format` validation, primitive arrays, object arrays, tuple arrays, and UI schema overrides.
+The local example app includes routes for primitive fields, enums, checkboxes, default values, const values, tiered `format` validation, conditional fields across JSON Schema drafts, primitive arrays, object arrays, tuple arrays, and UI schema overrides.
 
 [Supported JSON Schema keywords](#supported-json-schema-keywords)
 
@@ -25,6 +25,7 @@ The local example app includes routes for primitive fields, enums, checkboxes, d
   - [API](#api)
   - [Components API](#components-api)
     - [FormContext component API](#formcontext-component-api)
+    - [Conditional object schemas](#conditional-object-schemas)
   - [Functions API](#functions-api)
     - [getDataFromPointer(pointer, data)](#getdatafrompointerpointer-data)
     - [getArrayItemPointer(arrayPointer, index)](#getarrayitempointerarraypointer-index)
@@ -93,7 +94,7 @@ function PersonForm() {
 
 Schema `default` values are applied as initial form values and are included in submitted data even when the user does not touch the field. When a schema has `const` and no `default`, the `const` value is used as the initial form value.
 
-See `example/src/modules/` for fuller examples, including default values, const values, `format` validation, `useObject`, `useArray`, and UI schema overrides.
+See `example/src/modules/` for fuller examples, including default values, const values, `format` validation, conditional fields, `useObject`, `useArray`, and UI schema overrides.
 
 ## Installation
 
@@ -233,6 +234,80 @@ const schema = {
   },
 }
 ```
+
+### Conditional object schemas
+
+`useObject` resolves active conditional branches before rendering object fields, calculating `isRequired`, and assembling submitted schema-shaped data.
+
+Supported conditional keywords:
+
+- Draft-07 `dependencies`
+  - array form: field presence makes other fields required
+  - schema form: field presence applies an additional schema overlay
+- Draft 2019-09 and 2020-12 `dependentRequired`
+- Draft 2019-09 and 2020-12 `dependentSchemas`
+- `if` / `then` / `else`
+- `allOf` for composing independent conditional branches
+
+For condition matching, this library supports the form-builder subset used by conditional fields: `type`, `const`, `enum`, `required`, `properties`, and simple `allOf` / `anyOf` / `oneOf` composition. It does not try to be a complete JSON Schema validator for every conditional keyword combination.
+
+JSON Schema controls validity, not UI visibility. This library supports an `x-hidden` extension for form-builder visibility overlays. A hidden field is not rendered by `useObject`, is not marked required, and is omitted from assembled submit data.
+
+```ts
+const schema = {
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  type: 'object',
+  required: ['employmentStatus'],
+  properties: {
+    employmentStatus: {
+      type: 'string',
+      enum: ['employed', 'self_employed', 'unemployed'],
+    },
+    companyName: {
+      type: 'string',
+      title: 'Company name',
+      'x-hidden': true,
+    },
+    abnNumber: {
+      type: 'string',
+      title: 'ABN number',
+      'x-hidden': true,
+    },
+  },
+  if: {
+    properties: {
+      employmentStatus: { const: 'employed' },
+    },
+    required: ['employmentStatus'],
+  },
+  then: {
+    properties: {
+      companyName: { 'x-hidden': false },
+    },
+    required: ['companyName'],
+  },
+  else: {
+    if: {
+      properties: {
+        employmentStatus: { const: 'self_employed' },
+      },
+      required: ['employmentStatus'],
+    },
+    then: {
+      properties: {
+        abnNumber: { 'x-hidden': false },
+      },
+      required: ['abnNumber'],
+    },
+  },
+}
+```
+
+For complete examples, see:
+
+- `example/src/modules/conditional-draft-07`
+- `example/src/modules/conditional-2019-09`
+- `example/src/modules/conditional-fields`
 
 ## Functions API
 
@@ -553,6 +628,8 @@ Renders supported properties of an object sub-schema. Unlike other hooks, `useOb
 
 Open-ended list and tuple arrays are not auto-rendered by `useObject`; render them explicitly with `useArray`. Multi-select arrays (`items.enum` or bounded numeric ranges) still render through `useCheckbox`.
 
+For object schemas with supported conditional keywords, `useObject` watches the trigger fields it can infer from the schema and re-resolves active branches as values change. Conditional `properties` overlays can add or reveal fields, conditional `required` values update each field's `isRequired`, and active `x-hidden: true` fields are skipped.
+
 **Parameters:**
 
 Pass a single options object:
@@ -863,6 +940,12 @@ function TextAreaField() {
 - `const` (field validation; object and array submit validation; also used as a form default when `default` is not provided)
 - `format` (best-effort syntactic validation for the formats defined in JSON Schema Draft 2020-12 section 7.3; Tier 1 formats also map to native input widgets)
 - `default` (initial form values for primitives, objects, arrays, tuples, object-array rows, and multi-select checkbox arrays)
+- `dependencies` (Draft-07 conditional required fields and schema overlays)
+- `dependentRequired` (Draft 2019-09 / 2020-12 conditional required fields)
+- `dependentSchemas` (Draft 2019-09 / 2020-12 conditional schema overlays)
+- `if`, `then`, `else` (conditional object schema overlays)
+- `allOf` (for composing independent conditional object schema branches)
+- `x-hidden` (custom form-builder extension for conditional visibility)
 - `type` (does not support an array of types)
 - `properties`
 - `$id`
@@ -878,8 +961,8 @@ Does **not** fetch a JSON Schema from a remote URI (optional in the spec). Absol
 - [x] Apply schema `default` values to the form automatically.
 - [x] Implement `const`.
 - [x] Implement built-in validation for `format` keyword values.
-- [ ] Implement `dependencies` (Draft 07) for conditional fields.
-- [ ] Implement `allOf`, `anyOf`, `oneOf`, and `not` for composite schemas.
+- [x] Implement conditional fields for Draft-07 `dependencies`, Draft 2019-09 / 2020-12 `dependentRequired` and `dependentSchemas`, and `if` / `then` / `else`.
+- [ ] Implement full generic `allOf`, `anyOf`, `oneOf`, and `not` composite schema validation outside the conditional-field subset.
 - [ ] Optional: dedicated hooks per `format` (e.g. `useDate` for `date-time`).
 - [ ] Warn when schema keywords are invalid for their declared types.
 - [ ] Per-field error messages for built-in validation; scope customValidators per field.

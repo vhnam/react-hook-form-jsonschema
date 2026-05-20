@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Conditional object schema support for Draft-07 `dependencies`, Draft 2019-09/2020-12 `dependentRequired` and `dependentSchemas`, and `if`/`then`/`else` branches composed with `allOf`.
+- `x-hidden` schema overlays for conditional form visibility, including hidden-field omission from submitted schema data.
+- Example app routes comparing conditional field schemas across Draft-07, Draft 2019-09, and Draft 2020-12.
+
+### Changed
+
+- `useObject` now watches conditional trigger fields and resolves active conditional schema branches before rendering fields, calculating required state, and assembling submit data.
+
 ## [0.5.0] - 2026-05-21
 
 ### Added
