@@ -33,16 +33,22 @@ export interface BasicJSONSchemaType {
 }
 
 export type PropertyDependencies = Record<string, string[]>
-export type SchemaDependencies = JSONSchemaType
+export type SchemaDependencies = Record<string, JSONSchemaType>
+export type Draft07Dependencies = Record<string, string[] | JSONSchemaType>
 export interface ObjectJSONSchemaType extends BasicJSONSchemaType {
   type?: 'object'
   properties?: Record<string, JSONSchemaType>
   additionalProperties?: boolean
   required?: string[]
+  dependentRequired?: PropertyDependencies
+  dependentSchemas?: SchemaDependencies
+  if?: JSONSchemaType
+  then?: JSONSchemaType
+  else?: JSONSchemaType
   propertyNames?: StringJSONSchemaType
   minProperties?: number
   maxProperties?: number
-  dependencies?: PropertyDependencies | SchemaDependencies
+  dependencies?: Draft07Dependencies
   patternProperties?: Record<string, JSONSchemaType>
 }
 

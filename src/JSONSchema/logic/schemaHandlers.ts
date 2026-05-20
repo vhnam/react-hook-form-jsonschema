@@ -21,6 +21,7 @@ import {
   getSchemaProperty,
   isJSONSchemaObject,
 } from './schemaAccess'
+import { getActiveSchemaForData, isSchemaHidden } from './conditionalSchemas'
 import { getSchemaConst, hasSchemaConst } from '../../utils/constUtils'
 
 const isArrayIndex = (node: string): boolean => /^\d+$/.test(node)
@@ -239,6 +240,64 @@ const parsers: Record<string, (data: string) => number | boolean> = {
   boolean: (data: string): boolean => data === 'true',
 }
 
+const getRawObjectFromForm = (
+  data: Record<string, unknown>
+): Record<string, unknown> => {
+  return Object.keys(data)
+    .sort()
+    .reduce((rawObject: Record<string, unknown>, key: string) => {
+      const fieldValue = getSchemaNode(data, key)
+
+      if (fieldValue === undefined || fieldValue === null) {
+        return rawObject
+      }
+
+      const nodes = getSplitPointer(key).filter((node) => node !== 'properties')
+      let currentNode: Record<string, unknown> | unknown[] = rawObject
+
+      nodes.forEach((node, index) => {
+        const isLastNode = index === nodes.length - 1
+
+        if (isLastNode) {
+          if (Array.isArray(currentNode) && isArrayIndex(node)) {
+            currentNode[parseInt(node, 10)] = fieldValue
+          } else if (!Array.isArray(currentNode)) {
+            Reflect.set(currentNode, node, fieldValue)
+          }
+
+          return
+        }
+
+        const nextNode = nodes[index + 1] ?? ''
+        const nextValue = isArrayIndex(nextNode) ? [] : {}
+
+        if (Array.isArray(currentNode) && isArrayIndex(node)) {
+          const itemIndex = parseInt(node, 10)
+
+          if (currentNode[itemIndex] === undefined) {
+            currentNode[itemIndex] = nextValue
+          }
+
+          currentNode = currentNode[itemIndex] as Record<string, unknown> | unknown[]
+
+          return
+        }
+
+        if (!Array.isArray(currentNode)) {
+          if (!isReadableNode(getSchemaNode(currentNode, node))) {
+            Reflect.set(currentNode, node, nextValue)
+          }
+
+          currentNode = getSchemaNode(currentNode, node) as
+            | Record<string, unknown>
+            | unknown[]
+        }
+      })
+
+      return rawObject
+    }, {})
+}
+
 interface FormReducerContext {
   currentJSON: Record<string, unknown> | unknown[]
   currentSubSchema: JSONSchemaType | undefined
@@ -250,6 +309,11 @@ export const getObjectFromForm = (
   originalSchema: JSONSchemaType,
   data: Record<string, unknown>
 ): Record<string, unknown> => {
+  const activeSchema = getActiveSchemaForData(
+    originalSchema,
+    getRawObjectFromForm(data)
+  )
+
   return Object.keys(data)
     .sort()
     .reduce((objectFromData: Record<string, unknown>, key: string) => {
@@ -344,6 +408,10 @@ export const getObjectFromForm = (
               parsedValue = fieldValue
             }
 
+            if (isSchemaHidden(currentContext.currentSubSchema)) {
+              return { ...currentContext, insideProperties: false }
+            }
+
             if (isArrayIndex(node)) {
               const arrayTarget = currentContext.currentJSON
               const itemIndex = parseInt(node, 10)
@@ -412,7 +480,7 @@ export const getObjectFromForm = (
         },
         {
           currentJSON: objectFromData,
-          currentSubSchema: originalSchema,
+          currentSubSchema: activeSchema,
           insideProperties: false,
           targetData: fieldValue,
         }
@@ -447,7 +515,7 @@ export const getAnnotatedSchemaFromPointer = (
       const { JSONSchema, currentData } = currentInfo
 
       if (isArrayIndex(node) && JSONSchema?.type === 'array') {
-        const nextSchema = getItemsSchemaForIndex(
+        const itemSchema = getItemsSchemaForIndex(
           JSONSchema as ArrayJSONSchemaType,
           parseInt(node, 10)
         )
@@ -456,6 +524,9 @@ export const getAnnotatedSchemaFromPointer = (
             ? getSchemaNode(currentData, node)
             : undefined
         )
+        const nextSchema = itemSchema
+          ? getActiveSchemaForData(itemSchema, newCurrentData)
+          : undefined
 
         return {
           ...currentInfo,
@@ -504,8 +575,11 @@ export const getAnnotatedSchemaFromPointer = (
           : undefined
       )
       const isRequired = currentInfo.currentRequiredField.indexOf(node) > -1
-      const nextSchema = JSONSchema
+      const rawNextSchema = JSONSchema
         ? getSchemaProperty(JSONSchema, node)
+        : undefined
+      const nextSchema = rawNextSchema
+        ? getActiveSchemaForData(rawNextSchema, newCurrentData)
         : undefined
 
       return {
@@ -521,7 +595,7 @@ export const getAnnotatedSchemaFromPointer = (
       }
     },
     {
-      JSONSchema: schema,
+      JSONSchema: getActiveSchemaForData(schema, data),
       currentData: data,
       fatherExists: true,
       fatherIsRequired: true,
@@ -538,8 +612,9 @@ export const getAnnotatedSchemaFromPointer = (
     JSONSchema: info.JSONSchema as JSONSchemaType,
     invalidPointer: info.invalidPointer,
     isRequired:
-      (info.fatherIsRequired && info.isRequired) ||
-      (!info.fatherIsRequired && info.isRequired && info.fatherExists),
+      !isSchemaHidden(info.JSONSchema) &&
+      ((info.fatherIsRequired && info.isRequired) ||
+        (!info.fatherIsRequired && info.isRequired && info.fatherExists)),
     objectName: info.objectName,
     pointer: info.pointer,
   }

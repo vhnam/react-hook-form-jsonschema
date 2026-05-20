@@ -1,5 +1,5 @@
 import type { FieldError, FieldErrors } from 'react-hook-form'
-import { useFormState } from 'react-hook-form'
+import { useFormState, useWatch } from 'react-hook-form'
 
 import type {
   UseObjectProperties,
@@ -18,6 +18,10 @@ import {
   concatFormPointer,
 } from '../JSONSchema/path-handler'
 import { getAnnotatedSchemaFromPointer } from '../JSONSchema/logic'
+import {
+  getConditionalDependencyKeys,
+  isSchemaHidden,
+} from '../JSONSchema/logic/conditionalSchemas'
 import { getGenericInput } from './useGenericInput'
 import { getInputCustomFields } from './useInput'
 import { getRadioCustomFields } from './useRadio'
@@ -113,6 +117,10 @@ function getStructure(
   let inputs: UseObjectReturnType = []
   const { JSONSchema } = pointerInfo
 
+  if (isSchemaHidden(JSONSchema)) {
+    return inputs
+  }
+
   const genericInput = getGenericInput(
     formContext,
     pointerInfo,
@@ -178,6 +186,23 @@ export const useObject: UseObjectProperties = (props) => {
     control: formContext.control,
     name: props.pointer === '#' ? undefined : props.pointer,
   })
+  const basePointerInfo = getAnnotatedSchemaFromPointer(
+    props.pointer,
+    {},
+    formContext
+  )
+  const conditionalWatchNames = getConditionalDependencyKeys(
+    basePointerInfo.JSONSchema
+  ).map((key) =>
+    concatFormPointer(concatFormPointer(props.pointer, 'properties'), key)
+  )
+
+  useWatch({
+    control: formContext.control,
+    disabled: conditionalWatchNames.length === 0,
+    name: conditionalWatchNames,
+  })
+
   const data = formContext.getSchemaData(formContext.getValues())
   const childArray = getStructure(
     formContext,
