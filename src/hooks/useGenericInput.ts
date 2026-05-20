@@ -1,4 +1,4 @@
-import type { FieldError, FieldValues, RegisterOptions } from 'react-hook-form'
+import type { FieldError, RegisterOptions } from 'react-hook-form'
 
 import type { GenericInputParameters, BasicInputReturnType } from './types'
 import { InputTypes } from './types'
@@ -61,8 +61,7 @@ export const getGenericInput = (
         step
       ),
     getObject: () => JSONSchema,
-    getCurrentValue: (): FieldValues =>
-      formContext.getValues(pointer) as FieldValues,
+    getCurrentValue: (): unknown => formContext.getValues(pointer),
   }
 }
 

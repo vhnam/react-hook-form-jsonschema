@@ -127,9 +127,13 @@ export const normalizeArrayValue = (value: unknown): unknown[] => {
 
 export const getDefaultItemValue = (
   itemSchema: JSONSchemaType | undefined
-): Record<string, unknown> | string | number => {
+): unknown => {
   if (!itemSchema) {
     return ''
+  }
+
+  if (Object.prototype.hasOwnProperty.call(itemSchema, 'default')) {
+    return (itemSchema as { default?: unknown }).default
   }
 
   if (itemSchema.type === 'object') {

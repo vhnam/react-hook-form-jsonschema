@@ -31,6 +31,17 @@ const tagsSchemaNoMin = {
   },
 }
 
+const tagsSchemaWithItemDefault = {
+  type: 'object',
+  properties: {
+    tags: {
+      type: 'array',
+      title: 'Tags',
+      items: { type: 'string', default: 'draft' },
+    },
+  },
+}
+
 const MockTagsArray = () => {
   const methods = useArray('#/properties/tags')
 
@@ -102,6 +113,32 @@ test('appends items and submits string array', async () => {
   fireEvent.click(getByText('Submit'))
 
   await waitFor(() => expect(submitted.tags).toEqual(['react']))
+})
+
+test('appends items with item schema default values', async () => {
+  let submitted: { tags?: string[] } = {}
+
+  const { getByText, getByLabelText } = render(
+    <FormContext
+      schema={tagsSchemaWithItemDefault}
+      onSubmit={({ data }) => {
+        submitted = data as { tags?: string[] }
+      }}
+    >
+      <MockTagsArray />
+      <input type="submit" value="Submit" />
+    </FormContext>
+  )
+
+  fireEvent.click(getByText('Add tag'))
+
+  await waitFor(() => {
+    expect((getByLabelText('tag-0') as HTMLInputElement).value).toBe('draft')
+  })
+
+  fireEvent.click(getByText('Submit'))
+
+  await waitFor(() => expect(submitted.tags).toEqual(['draft']))
 })
 
 test('shows minItems error when empty', async () => {

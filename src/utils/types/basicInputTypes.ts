@@ -1,4 +1,4 @@
-import type { FieldValues, RegisterOptions } from 'react-hook-form'
+import type { RegisterOptions } from 'react-hook-form'
 
 import type { JSONSchemaType } from '../../JSONSchema'
 import type { JSONFormContextValues } from '../../components/types'
@@ -8,7 +8,7 @@ import type { InputTypes } from '../inputTypes'
 export interface BasicInputReturnType {
   getError(): ErrorMessage
   getObject(): JSONSchemaType
-  getCurrentValue(): FieldValues
+  getCurrentValue(): unknown
   formContext: JSONFormContextValues
   isRequired: boolean
   name: string

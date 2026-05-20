@@ -1,4 +1,8 @@
-import type { JSONSchemaType, JSONSubSchemaInfo } from './types'
+import type {
+  FormPointerValues,
+  JSONObject,
+  JSONSubSchemaInfo,
+} from './types'
 import {
   getObjectFromForm,
   concatFormPointer,
@@ -10,23 +14,28 @@ import { useFormContext } from '../components'
 
 const useAnnotatedSchemaFromPointer = (
   path: string,
-  data: JSONSchemaType
+  data: JSONObject
 ): JSONSubSchemaInfo => {
   return getAnnotatedSchemaFromPointer(path, data, useFormContext())
 }
 
-const useObjectFromForm = (data: JSONSchemaType): JSONSchemaType => {
+const useObjectFromForm = (data: FormPointerValues): JSONObject => {
   return getObjectFromForm(useFormContext().schema, data)
 }
 
 interface PointerDataContext {
-  currentData: JSONSchemaType | undefined
+  currentData: unknown
   insideProperties: boolean
 }
 
+const isReadableNode = (
+  value: unknown
+): value is Record<string, unknown> | readonly unknown[] =>
+  typeof value === 'object' && value !== null
+
 const getDataFromPointer = (
   pointer: string,
-  data: JSONSchemaType
+  data: JSONObject
 ): undefined | string => {
   const splitPointer = getSplitPointer(pointer)
 
@@ -43,7 +52,7 @@ const getDataFromPointer = (
       insideProperties = false
 
       return {
-        currentData: currentContext.currentData
+        currentData: isReadableNode(currentContext.currentData)
           ? asFormDataNode(getSchemaNode(currentContext.currentData, node))
           : undefined,
         insideProperties: true,

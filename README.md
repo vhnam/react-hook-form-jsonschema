@@ -171,7 +171,7 @@ The library also exports `useFormContext()` to access the same context value fro
   - `event`: React synthetic event (if available)
   - `methods`: `JSONFormContextValues` — full form context, including react-hook-form methods such as `trigger`, `reset`, and `setValue`
 - `noNativeValidate`: When `true`, sets `noValidate` on the `<form>` so the browser does not block submit. Default: `true`. Native validation is disabled because this library does not implement URI/email `format` validation in HTML5 attributes.
-- `defaultValues`: Initial form values (react-hook-form `defaultValues`).
+- `defaultValues`: Initial form values (react-hook-form `defaultValues`). These override any `default` values from the JSON Schema.
 
 ## Functions API
 
@@ -800,7 +800,7 @@ Does **not** fetch a JSON Schema from a remote URI (optional in the spec). Absol
 ### JSON Schema
 
 - [x] Improve array type support (and its validation).
-- [ ] Apply schema `default` values to the form automatically.
+- [x] Apply schema `default` values to the form automatically.
 - [ ] Implement `const`.
 - [ ] Implement built-in validation for `format` keyword values.
 - [ ] Implement `dependencies` (Draft 07) for conditional fields.

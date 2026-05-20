@@ -6,8 +6,8 @@ import type {
 } from './types'
 import { UITypes } from './types'
 import type {
+  JSONObject,
   JSONSubSchemaInfo,
-  JSONSchemaType,
   ObjectJSONSchemaType,
 } from '../JSONSchema'
 import {
@@ -71,7 +71,7 @@ function getChildProperties(
   pointer: string,
   UISchema: UISchemaType | undefined,
   formContext: JSONFormContextValues,
-  data: JSONSchemaType
+  data: JSONObject
 ) {
   return (allInputs: UseObjectReturnType, key: string) => {
     const newUISchema =
@@ -105,7 +105,7 @@ function getStructure(
   pointerInfo: JSONSubSchemaInfo,
   pointer: string,
   UISchema: UISchemaType | undefined,
-  data: JSONSchemaType
+  data: JSONObject
 ): UseObjectReturnType {
   let inputs: UseObjectReturnType = []
   const { JSONSchema } = pointerInfo

@@ -1,6 +1,5 @@
 import type { ComponentProps } from 'react'
 import { useEffect, useRef, useState } from 'react'
-import type { FieldValues } from 'react-hook-form'
 
 import type { ArrayJSONSchemaType, JSONSchemaType } from '../JSONSchema'
 import type { JSONSubSchemaInfo } from '../JSONSchema'
@@ -189,8 +188,7 @@ export const buildArrayReturn = (
         name: String(index),
         validator: itemValidator,
         getObject: () => itemSchema,
-        getCurrentValue: (): FieldValues =>
-          formContext.getValues(itemPointer) as FieldValues,
+        getCurrentValue: (): unknown => formContext.getValues(itemPointer),
         getError: () => baseInput.getError(),
       }
 
