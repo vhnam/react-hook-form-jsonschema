@@ -4,11 +4,7 @@ import type {
 } from '../JSONSchema'
 
 const mapEnumItemsToString = (obj: JSONSchemaBaseInstanceTypes): string => {
-  if (obj) {
-    return obj.toString()
-  }
-
-  return ''
+  return String(obj)
 }
 
 export const getEnumAsStringArray = (

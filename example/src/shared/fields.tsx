@@ -9,6 +9,7 @@ import {
   type UseCheckboxReturnType,
   type UseTextAreaReturnType,
   type BasicInputReturnType,
+  type UseArrayReturnType,
   type UISchemaType,
 } from 'react-hook-form-jsonschema'
 
@@ -153,6 +154,37 @@ export function ObjectFields(props: { pointer: string; UISchema?: UISchemaType }
   )
 }
 
+function ArrayPrimitiveControl(props: {
+  array: UseArrayReturnType
+  index: number
+  ariaLabel: string
+}) {
+  const itemOptions = props.array.getItemOptions(props.index)
+
+  if (itemOptions.length > 0) {
+    return (
+      <select
+        {...props.array.getItemSelectProps(props.index)}
+        aria-label={props.ariaLabel}
+      >
+        <option value="">Select an option</option>
+        {itemOptions.map(option => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+    )
+  }
+
+  return (
+    <input
+      {...props.array.getItemInputProps(props.index)}
+      aria-label={props.ariaLabel}
+    />
+  )
+}
+
 export function ListArrayField({ pointer }: { pointer: string }) {
   const array = useArray(pointer)
   const title = array.getObject().title ?? array.name
@@ -169,9 +201,10 @@ export function ListArrayField({ pointer }: { pointer: string }) {
             {array.isPrimitiveItem(index) ? (
               <>
                 <label {...array.getItemLabelProps(index)}>{itemTitle}</label>
-                <input
-                  {...array.getItemInputProps(index)}
-                  aria-label={`${title}-${index}`}
+                <ArrayPrimitiveControl
+                  array={array}
+                  index={index}
+                  ariaLabel={`${title}-${index}`}
                 />
               </>
             ) : (
@@ -220,9 +253,10 @@ export function TupleArrayField({ pointer }: { pointer: string }) {
             <label {...array.getItemLabelProps(index)}>
               {itemSchema?.title ?? `Index ${index}`}
             </label>
-            <input
-              {...array.getItemInputProps(index)}
-              aria-label={`${title}-${index}`}
+            <ArrayPrimitiveControl
+              array={array}
+              index={index}
+              ariaLabel={`${title}-${index}`}
             />
             {array.canRemove(index) && (
               <button

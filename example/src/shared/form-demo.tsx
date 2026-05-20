@@ -3,7 +3,6 @@ import {
   FormContext,
   type ObjectJSONSchemaType,
   type OnSubmitParameters,
-  type UISchemaType,
 } from 'react-hook-form-jsonschema'
 
 type SaveState = {
@@ -42,7 +41,6 @@ export type FormDemoProps = PropsWithChildren<{
   schema: ObjectJSONSchemaType
   title: string
   description: string
-  uiSchema?: UISchemaType
   defaultValues?: Record<string, unknown>
 }>
 
@@ -50,7 +48,6 @@ export function FormDemo({
   schema,
   title,
   description,
-  uiSchema,
   defaultValues,
   children,
 }: FormDemoProps) {

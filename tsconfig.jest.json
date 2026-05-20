@@ -2,8 +2,12 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "noEmit": true,
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "react-hook-form-jsonschema": ["src/index.ts"]
+    }
   },
-  "include": ["src", "setupTests.ts"],
-  "exclude": ["node_modules", "output", "example"]
+  "include": ["src", "example/src", "setupTests.ts"],
+  "exclude": ["node_modules", "output"]
 }

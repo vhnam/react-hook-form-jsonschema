@@ -4,6 +4,10 @@ import type {
   UISchemaType,
 } from 'react-hook-form-jsonschema'
 
+export type ExampleFormProps = {
+  uiSchema?: UISchemaType
+}
+
 export type ExampleDefinition = {
   /** Folder name under `src/modules/` */
   id: string
@@ -15,5 +19,5 @@ export type ExampleDefinition = {
   schema: ObjectJSONSchemaType
   uiSchema?: UISchemaType
   defaultValues?: Record<string, unknown>
-  Form: ComponentType
+  Form: ComponentType<ExampleFormProps>
 }

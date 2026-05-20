@@ -4,7 +4,10 @@ import type {
   JSONSubSchemaInfo,
 } from '../types'
 import type { JSONFormContextValues } from '../../components'
-import { isMultiSelectArray } from '../../hooks/arrayUtils'
+import {
+  getMultiSelectOptions,
+  isMultiSelectArray,
+} from '../../hooks/arrayUtils'
 import {
   concatFormPointer,
   JSONSchemaRootPointer,
@@ -21,13 +24,40 @@ import {
 
 const isArrayIndex = (node: string): boolean => /^\d+$/.test(node)
 
+const isReadableNode = (
+  value: unknown
+): value is Record<string, unknown> | readonly unknown[] =>
+  typeof value === 'object' && value !== null
+
+const hasOwnProperty = (object: object, key: string): boolean =>
+  Object.prototype.hasOwnProperty.call(object, key)
+
+const getRecordValue = (object: object, key: string): unknown =>
+  (object as Record<string, unknown>)[key]
+
+const getSchemaDefault = (schema: JSONSchemaType): unknown =>
+  (schema as { default?: unknown }).default
+
+const cloneDefaultValue = (value: unknown): unknown => {
+  if (Array.isArray(value)) {
+    return value.map(cloneDefaultValue)
+  }
+
+  if (isJSONSchemaObject(value)) {
+    return Object.keys(value).reduce<Record<string, unknown>>((acc, key) => {
+      acc[key] = cloneDefaultValue(getRecordValue(value, key))
+
+      return acc
+    }, {})
+  }
+
+  return value
+}
+
 const compactMultiSelectArrayValue = (value: unknown[]): unknown[] =>
   value.filter(
     (entry) =>
-      entry !== false &&
-      entry !== undefined &&
-      entry !== null &&
-      entry !== ''
+      entry !== false && entry !== undefined && entry !== null && entry !== ''
   )
 
 const maybeCompactMultiSelectValue = (
@@ -46,6 +76,154 @@ const maybeCompactMultiSelectValue = (
   return value
 }
 
+interface DefaultValueContext {
+  defaults: Record<string, unknown>
+  hasInheritedDefault: boolean
+  inheritedDefault: unknown
+  pointer: string
+}
+
+const setDefaultValue = (
+  defaults: Record<string, unknown>,
+  pointer: string,
+  value: unknown
+): void => {
+  if (pointer !== JSONSchemaRootPointer) {
+    defaults[pointer] = cloneDefaultValue(value)
+  }
+}
+
+const collectArrayDefaultValues = (
+  schema: ArrayJSONSchemaType,
+  context: DefaultValueContext
+): void => {
+  const schemaHasDefault = hasOwnProperty(schema, 'default')
+  const hasDefault = schemaHasDefault || context.hasInheritedDefault
+  const defaultValue = schemaHasDefault
+    ? getSchemaDefault(schema)
+    : context.inheritedDefault
+  const isMultiSelectDefault =
+    Array.isArray(defaultValue) &&
+    schema.uniqueItems === true &&
+    isMultiSelectArray(schema)
+  const formDefaultValue = isMultiSelectDefault
+    ? getMultiSelectOptions(schema).map((option) =>
+        defaultValue.map(String).includes(option) ? option : false
+      )
+    : defaultValue
+  const defaultItems = Array.isArray(formDefaultValue)
+    ? formDefaultValue
+    : undefined
+  const itemCount = Math.max(
+    defaultItems?.length ?? 0,
+    Array.isArray(schema.items) ? schema.items.length : 0,
+    schema.minItems ?? 0
+  )
+
+  if (hasDefault) {
+    setDefaultValue(context.defaults, context.pointer, formDefaultValue)
+  }
+
+  if (isMultiSelectDefault) {
+    return
+  }
+
+  for (let index = 0; index < itemCount; index += 1) {
+    const itemSchema = getItemsSchemaForIndex(schema, index)
+
+    if (!itemSchema) {
+      continue
+    }
+
+    const itemHasInheritedDefault =
+      defaultItems !== undefined && index in defaultItems
+
+    collectSchemaDefaultValues(itemSchema, {
+      defaults: context.defaults,
+      hasInheritedDefault: itemHasInheritedDefault,
+      inheritedDefault: itemHasInheritedDefault
+        ? defaultItems[index]
+        : undefined,
+      pointer: concatFormPointer(context.pointer, String(index)),
+    })
+  }
+}
+
+const collectObjectDefaultValues = (
+  schema: JSONSchemaType,
+  context: DefaultValueContext
+): void => {
+  const objectSchema = asObjectSchema(schema)
+  const properties = objectSchema?.properties ?? {}
+  const schemaHasDefault = hasOwnProperty(schema, 'default')
+  const defaultValue = schemaHasDefault
+    ? getSchemaDefault(schema)
+    : context.inheritedDefault
+  const objectDefault = isJSONSchemaObject(defaultValue)
+    ? defaultValue
+    : undefined
+
+  Object.keys(properties).forEach((key) => {
+    const childSchema = properties[key]
+    const childHasInheritedDefault =
+      objectDefault !== undefined && hasOwnProperty(objectDefault, key)
+
+    collectSchemaDefaultValues(childSchema, {
+      defaults: context.defaults,
+      hasInheritedDefault: childHasInheritedDefault,
+      inheritedDefault: childHasInheritedDefault
+        ? getRecordValue(objectDefault, key)
+        : undefined,
+      pointer: concatFormPointer(
+        concatFormPointer(context.pointer, 'properties'),
+        key
+      ),
+    })
+  })
+}
+
+const collectSchemaDefaultValues = (
+  schema: JSONSchemaType,
+  context: DefaultValueContext
+): void => {
+  if (schema.type === 'object') {
+    collectObjectDefaultValues(schema, context)
+
+    return
+  }
+
+  if (schema.type === 'array') {
+    collectArrayDefaultValues(schema as ArrayJSONSchemaType, context)
+
+    return
+  }
+
+  const schemaHasDefault = hasOwnProperty(schema, 'default')
+
+  if (schemaHasDefault || context.hasInheritedDefault) {
+    const defaultValue = schemaHasDefault
+      ? getSchemaDefault(schema)
+      : context.inheritedDefault
+
+    setDefaultValue(context.defaults, context.pointer, defaultValue)
+  }
+}
+
+export const getDefaultValuesFromSchema = (
+  schema: JSONSchemaType
+): Record<string, unknown> => {
+  const defaults: Record<string, unknown> = {}
+
+  collectSchemaDefaultValues(schema, {
+    defaults,
+    hasInheritedDefault: false,
+    inheritedDefault: undefined,
+    pointer: JSONSchemaRootPointer,
+  })
+
+  return defaults
+}
+
 const parsers: Record<string, (data: string) => number | boolean> = {
   integer: (data: string): number => parseInt(data, 10),
   number: (data: string): number => parseFloat(data),
@@ -53,7 +231,7 @@ const parsers: Record<string, (data: string) => number | boolean> = {
 }
 
 interface FormReducerContext {
-  currentJSON: JSONSchemaType
+  currentJSON: Record<string, unknown> | unknown[]
   currentSubSchema: JSONSchemaType | undefined
   insideProperties: boolean
   targetData: unknown
@@ -61,11 +239,11 @@ interface FormReducerContext {
 
 export const getObjectFromForm = (
   originalSchema: JSONSchemaType,
-  data: JSONSchemaType
-): JSONSchemaType => {
+  data: Record<string, unknown>
+): Record<string, unknown> => {
   return Object.keys(data)
     .sort()
-    .reduce((objectFromData: JSONSchemaType, key: string) => {
+    .reduce((objectFromData: Record<string, unknown>, key: string) => {
       const splitPointer = getSplitPointer(key)
       const fieldValue: unknown = getSchemaNode(data, key)
 
@@ -93,7 +271,7 @@ export const getObjectFromForm = (
               currentContext.currentSubSchema = itemsSchema
             }
 
-            const arrayTarget = currentContext.currentJSON as unknown[]
+            const arrayTarget = currentContext.currentJSON
 
             if (
               Array.isArray(arrayTarget) &&
@@ -158,7 +336,7 @@ export const getObjectFromForm = (
             }
 
             if (isArrayIndex(node)) {
-              const arrayTarget = currentContext.currentJSON as unknown[]
+              const arrayTarget = currentContext.currentJSON
               const itemIndex = parseInt(node, 10)
 
               if (Array.isArray(arrayTarget)) {
@@ -211,7 +389,9 @@ export const getObjectFromForm = (
           }
 
           const nextJson = isArrayIndex(node)
-            ? (currentContext.currentJSON as unknown[])[parseInt(node, 10)]
+            ? Array.isArray(currentContext.currentJSON)
+              ? currentContext.currentJSON[parseInt(node, 10)]
+              : undefined
             : getSchemaNode(currentContext.currentJSON, node)
           currentContext.currentJSON = Array.isArray(nextJson)
             ? nextJson
@@ -235,7 +415,7 @@ export const getObjectFromForm = (
 
 interface ReducerSubSchemaInfo {
   JSONSchema: JSONSchemaType | undefined
-  currentData: JSONSchemaType | undefined
+  currentData: unknown
   invalidPointer: boolean
   isRequired: boolean
   fatherExists: boolean
@@ -248,7 +428,7 @@ interface ReducerSubSchemaInfo {
 
 export const getAnnotatedSchemaFromPointer = (
   pointer: string,
-  data: JSONSchemaType,
+  data: Record<string, unknown>,
   formContext: JSONFormContextValues
 ): JSONSubSchemaInfo => {
   const { schema } = formContext
@@ -263,7 +443,9 @@ export const getAnnotatedSchemaFromPointer = (
           parseInt(node, 10)
         )
         const newCurrentData = asFormDataNode(
-          currentData ? getSchemaNode(currentData, node) : undefined
+          isReadableNode(currentData)
+            ? getSchemaNode(currentData, node)
+            : undefined
         )
 
         return {
@@ -308,7 +490,9 @@ export const getAnnotatedSchemaFromPointer = (
 
       const fatherExists = !!currentData
       const newCurrentData = asFormDataNode(
-        currentData ? getSchemaNode(currentData, node) : undefined
+        isReadableNode(currentData)
+          ? getSchemaNode(currentData, node)
+          : undefined
       )
       const isRequired = currentInfo.currentRequiredField.indexOf(node) > -1
       const nextSchema = JSONSchema

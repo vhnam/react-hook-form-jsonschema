@@ -13,12 +13,14 @@ export interface UseArrayReturnType extends BasicInputReturnType {
   getItemPointer(index: number): string
   getItemSchema(index: number): JSONSchemaType | undefined
   getItemValidator(index: number): RegisterOptions
+  getItemOptions(index: number): string[]
   appendItem(): void
   removeItem(index: number): void
   canAdd(): boolean
   canRemove(index: number): boolean
   isPrimitiveItem(index: number): boolean
   getItemInputProps(index: number): ComponentProps<'input'>
+  getItemSelectProps(index: number): ComponentProps<'select'>
   getItemLabelProps(index: number): ComponentProps<'label'>
 }
 

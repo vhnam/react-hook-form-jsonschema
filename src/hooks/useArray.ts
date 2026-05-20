@@ -1,6 +1,5 @@
 import type { ComponentProps } from 'react'
 import { useEffect, useRef, useState } from 'react'
-import type { FieldValues } from 'react-hook-form'
 
 import type { ArrayJSONSchemaType, JSONSchemaType } from '../JSONSchema'
 import type { JSONSubSchemaInfo } from '../JSONSchema'
@@ -17,7 +16,12 @@ import {
   getSingleItemsSchema,
   getTupleItemsLength,
 } from './arrayUtils'
-import { getArrayItemPointer, getListArrayEntries } from '../utils/listArrayFormUtils'
+import {
+  getArrayItemPointer,
+  getListArrayEntries,
+  getListArrayItemPointers,
+} from '../utils/listArrayFormUtils'
+import { getEnumAsStringArray } from '../utils/enumUtils'
 import { ErrorTypes } from '../utils/errorTypes'
 import { useGenericInput } from './useGenericInput'
 import { getValidator } from './validators/getGenericValidator'
@@ -72,6 +76,12 @@ export const buildArrayReturn = (
     return getValidator(itemContext, formContext.customValidators ?? {})
   }
 
+  const getItemOptions = (index: number): string[] => {
+    const itemSchema = getItemSchema(index)
+
+    return itemSchema?.enum ? getEnumAsStringArray(itemSchema) : []
+  }
+
   const canAdd = (): boolean => {
     if (!canAddBeyondTupleLength(arraySchema, fieldCount)) {
       return false
@@ -114,13 +124,34 @@ export const buildArrayReturn = (
       return
     }
 
-    for (let i = index; i < fieldCount - 1; i += 1) {
-      const nextValue: unknown = formContext.getValues(getItemPointer(i + 1))
-      formContext.setValue(getItemPointer(i), nextValue)
-      formContext.unregister(getItemPointer(i + 1))
+    const formValues = formContext.getValues() as Record<string, unknown>
+    const pointersToClear = new Set<string>()
+
+    for (let i = index; i < fieldCount; i += 1) {
+      pointersToClear.add(getItemPointer(i))
+      getListArrayItemPointers(formValues, pointer, i).forEach((itemPointer) =>
+        pointersToClear.add(itemPointer)
+      )
     }
 
-    formContext.unregister(getItemPointer(fieldCount - 1))
+    formContext.unregister([...pointersToClear])
+
+    for (let i = index; i < fieldCount - 1; i += 1) {
+      const sourcePrefix = getItemPointer(i + 1)
+      const targetPrefix = getItemPointer(i)
+      const sourcePointers = getListArrayItemPointers(formValues, pointer, i + 1)
+
+      sourcePointers.forEach((sourcePointer) => {
+        const targetPointer = `${targetPrefix}${sourcePointer.slice(
+          sourcePrefix.length
+        )}`
+
+        formContext.setValue(targetPointer, formValues[sourcePointer], {
+          shouldValidate: false,
+        })
+      })
+    }
+
     setFieldCount((count) => count - 1)
   }
 
@@ -156,6 +187,7 @@ export const buildArrayReturn = (
     getItemPointer,
     getItemSchema,
     getItemValidator,
+    getItemOptions,
     appendItem,
     removeItem,
     canAdd,
@@ -189,8 +221,7 @@ export const buildArrayReturn = (
         name: String(index),
         validator: itemValidator,
         getObject: () => itemSchema,
-        getCurrentValue: (): FieldValues =>
-          formContext.getValues(itemPointer) as FieldValues,
+        getCurrentValue: (): unknown => formContext.getValues(itemPointer),
         getError: () => baseInput.getError(),
       }
 
@@ -217,6 +248,16 @@ export const buildArrayReturn = (
         id: getItemInputId(itemPointer),
       }
     },
+    getItemSelectProps: (index: number) => {
+      const itemPointer = getItemPointer(index)
+      const itemValidator = getItemValidator(index)
+      const { register } = formContext
+
+      return {
+        ...register(itemPointer, itemValidator),
+        id: getItemInputId(itemPointer),
+      }
+    },
   }
 
   return arrayMethods
@@ -225,10 +266,11 @@ export const buildArrayReturn = (
 export const useArray: UseArrayParameters = (pointer: string) => {
   const baseInput = useGenericInput(pointer)
   const { formContext } = baseInput
+  const { getValues, register, unregister } = formContext
   const arraySchema = baseInput.getObject() as ArrayJSONSchemaType
   const tupleLength = getTupleItemsLength(arraySchema)
   const initialCount = Math.max(
-    getListArrayEntries(formContext.getValues(), pointer).length,
+    getListArrayEntries(getValues(), pointer).length,
     arraySchema.minItems ?? 0,
     tupleLength
   )
@@ -247,10 +289,10 @@ export const useArray: UseArrayParameters = (pointer: string) => {
     // List arrays store values at indexed pointers (`…/0`, `…/1`), not at the
     // array pointer. RHF `required` / getArrayValidator rules read the parent
     // field value and would always fail; length is validated here instead.
-    formContext.register(pointer, {
+    register(pointer, {
       validate: {
         arrayLength: (): string | true => {
-          const entries = getListArrayEntries(formContext.getValues(), pointer)
+          const entries = getListArrayEntries(getValues(), pointer)
           const length = Math.max(entries.length, fieldCountRef.current)
 
           if (minItems > 0 && length < minItems) {
@@ -267,15 +309,17 @@ export const useArray: UseArrayParameters = (pointer: string) => {
     })
 
     return () => {
-      formContext.unregister(pointer)
+      unregister(pointer)
     }
   }, [
     arraySchema.maxItems,
     arraySchema.minItems,
     baseInput.isRequired,
-    formContext,
+    getValues,
     pointer,
+    register,
     tupleLength,
+    unregister,
   ])
 
   return buildArrayReturn(baseInput, fieldCount, setFieldCount)

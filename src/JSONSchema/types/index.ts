@@ -7,6 +7,12 @@ export type JSONSchemaType =
   | StringJSONSchemaType
   | NullJSONSchemaType
 
+export type JSONPrimitive = boolean | string | number | null
+export type JSONValue = JSONPrimitive | JSONObject | JSONArray
+export type JSONObject = Record<string, unknown>
+export type JSONArray = unknown[]
+export type FormPointerValues = Record<string, unknown>
+
 export interface BasicJSONSchemaType {
   type?: string
   title?: string
@@ -20,14 +26,10 @@ export interface BasicJSONSchemaType {
   oneOf?: JSONSchemaType[]
   not?: JSONSchemaType[]
   enum?: JSONSchemaBaseInstanceTypes[]
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const?: any
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  default?: any
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  examples?: any
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key: string]: any
+  const?: unknown
+  default?: unknown
+  examples?: unknown
+  [key: string]: unknown
 }
 
 export type PropertyDependencies = Record<string, string[]>
@@ -81,7 +83,7 @@ export interface NullJSONSchemaType extends BasicJSONSchemaType {
   type?: 'null'
 }
 
-export type JSONSchemaBaseInstanceTypes = boolean | string | number | null
+export type JSONSchemaBaseInstanceTypes = JSONPrimitive
 
 export type JSONSubSchemaInfo = {
   JSONSchema: JSONSchemaType

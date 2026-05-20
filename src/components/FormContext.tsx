@@ -3,21 +3,32 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   type ComponentProps,
 } from 'react'
-import type { FieldValues } from 'react-hook-form'
+import type { DefaultValues, FieldValues } from 'react-hook-form'
 import { useForm } from 'react-hook-form'
 
 import type { FormContextProps, JSONFormContextValues } from './types'
+import type { JSONSchemaType } from '../JSONSchema/types'
 import {
+  getDefaultValuesFromSchema,
   getObjectFromForm,
+} from '../JSONSchema/logic/schemaHandlers'
+import {
   getIdSchemaPairs,
   resolveRefs,
-} from '../JSONSchema/logic'
+} from '../JSONSchema/logic/refHandlers'
 
-export const InternalFormContext = createContext<JSONFormContextValues | null>(
-  null
-)
+type SchemaData = Record<string, unknown>
+type GetSchemaData = (
+  schema: JSONSchemaType,
+  formValues: Record<string, unknown>
+) => SchemaData
+
+const getSchemaDataFromForm: GetSchemaData = getObjectFromForm
+
+export const InternalFormContext = createContext<unknown>(null)
 
 export function useFormContext<
   T extends FieldValues = FieldValues,
@@ -25,7 +36,11 @@ export function useFormContext<
   return useContext(InternalFormContext) as JSONFormContextValues<T>
 }
 
-export const FormContext = (props: FormContextProps) => {
+export const FormContext = <
+  FormValues extends FieldValues = FieldValues,
+>(
+  props: FormContextProps<FormValues>
+) => {
   const {
     formProps: userFormProps,
     onChange,
@@ -35,15 +50,45 @@ export const FormContext = (props: FormContextProps) => {
     defaultValues,
   } = props
 
-  const methods = useForm({
-    defaultValues,
+  const idMap = useMemo(() => getIdSchemaPairs(props.schema), [props.schema])
+
+  const resolvedSchemaRefs = useMemo<JSONSchemaType>(
+    () => resolveRefs(props.schema, idMap, []),
+    [props.schema, idMap]
+  )
+
+  const schemaDefaultValues = useMemo(
+    () => getDefaultValuesFromSchema(resolvedSchemaRefs),
+    [resolvedSchemaRefs]
+  )
+
+  const formDefaultValues = useMemo<DefaultValues<FormValues>>(
+    () =>
+      ({ ...schemaDefaultValues, ...defaultValues }) as DefaultValues<FormValues>,
+    [schemaDefaultValues, defaultValues]
+  )
+
+  const methods = useForm<FormValues>({
+    defaultValues: formDefaultValues,
     mode: validationMode,
     reValidateMode: revalidateMode,
     shouldFocusError: submitFocusError,
   })
+  const { reset } = methods
+  const hasMountedRef = useRef(false)
 
-  // Subscribe to errors so the provider re-renders after validation (RHF proxies formState).
-  const { errors } = methods.formState
+  const getSchemaData = (formValues: FieldValues): SchemaData =>
+    getSchemaDataFromForm(resolvedSchemaRefs, formValues)
+
+  useEffect(() => {
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true
+
+      return
+    }
+
+    reset(formDefaultValues)
+  }, [formDefaultValues, reset])
 
   useEffect(() => {
     if (typeof onChange !== 'function') {
@@ -51,35 +96,34 @@ export const FormContext = (props: FormContextProps) => {
     }
 
     const subscription = methods.watch((formValues) => {
-      onChange(getObjectFromForm(props.schema, formValues))
+      onChange(getSchemaData(formValues))
     })
 
     return () => subscription.unsubscribe()
-  }, [methods, onChange, props.schema])
+  }, [methods, onChange, resolvedSchemaRefs])
 
-  const idMap = useMemo(() => getIdSchemaPairs(props.schema), [props.schema])
-
-  const resolvedSchemaRefs = useMemo(
-    () => resolveRefs(props.schema, idMap, []),
-    [props.schema, idMap]
-  )
-
-  const formContext: JSONFormContextValues = useMemo(() => {
-    return {
+  const formContext: JSONFormContextValues<FormValues> = useMemo(() => {
+    const context = {
       ...methods,
-      errors,
       schema: resolvedSchemaRefs,
       idMap,
       customValidators: props.customValidators,
-    }
-  }, [methods, errors, resolvedSchemaRefs, idMap, props.customValidators])
+    } as JSONFormContextValues<FormValues>
+
+    Object.defineProperty(context, 'errors', {
+      enumerable: true,
+      get: () => methods.formState.errors,
+    })
+
+    return context
+  }, [methods, resolvedSchemaRefs, idMap, props.customValidators])
 
   const formProps: ComponentProps<'form'> = { ...userFormProps }
 
   const submitHandler = methods.handleSubmit((data, event) => {
     if (props.onSubmit) {
       void props.onSubmit({
-        data: getObjectFromForm(props.schema, data),
+        data: getSchemaData(data),
         event,
         methods: formContext,
       })

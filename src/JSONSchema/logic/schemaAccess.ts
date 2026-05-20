@@ -4,6 +4,8 @@ import type {
   ObjectJSONSchemaType,
 } from '../types'
 
+type ReadableNode = Record<string, unknown> | readonly unknown[]
+
 export const isJSONSchemaObject = (value: unknown): value is JSONSchemaType => {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
@@ -18,17 +20,17 @@ export const getSchemaProperty = (
 }
 
 export const getSchemaNode = (
-  schema: JSONSchemaType,
+  schema: ReadableNode,
   key: string
 ): unknown => Reflect.get(schema, key)
 
-/** Form data is stored in a JSONSchema-shaped tree; leaves may be scalars. */
-export const asFormDataNode = (value: unknown): JSONSchemaType | undefined => {
+/** Form data is stored in a schema-shaped tree; leaves may be scalars. */
+export const asFormDataNode = (value: unknown): unknown => {
   if (value === undefined) {
     return undefined
   }
 
-  return isJSONSchemaObject(value) ? value : (value as JSONSchemaType)
+  return value
 }
 
 export const asObjectSchema = (

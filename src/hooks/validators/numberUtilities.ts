@@ -5,6 +5,17 @@ import { ErrorTypes } from '../../utils/errorTypes'
 
 // Used for exclusiveMinimum and exclusiveMaximum values
 const EPSILON = 0.0001
+const integerPattern = /^(?:|[+-]?(?:[1-9]\d*|0))$/
+const numberPattern =
+  /^(?:|[+-]?(?:(?:[1-9]\d*|0)(?:\.\d+)?|\.\d+)(?:[eE][+-]?\d+)?)$/
+
+const isMultipleOf = (value: number, multipleOf: number): boolean => {
+  const quotient = value / multipleOf
+  const nearestInteger = Math.round(quotient)
+  const tolerance = Number.EPSILON * Math.max(1, Math.abs(quotient)) * 100
+
+  return Math.abs(quotient - nearestInteger) <= tolerance
+}
 
 export const toFixed = (value: number, precision: number): string => {
   const power = 10 ** (precision || 0)
@@ -101,19 +112,22 @@ export const getNumberValidator = (
   const validator: RegisterOptions = {
     validate: {
       multipleOf: (value: string) => {
-        if (numberSchema.type === 'integer' && value) {
+        if (value !== '') {
           const multipleOf = numberSchema.multipleOf
 
           if (multipleOf == null) {
             return true
           }
 
-          return Number.parseInt(value, 10) % multipleOf === 0
-            ? true
-            : ErrorTypes.multipleOf
+          const numericValue = Number(value)
+
+          if (!Number.isFinite(numericValue)) {
+            return true
+          }
+
+          return isMultipleOf(numericValue, multipleOf) || ErrorTypes.multipleOf
         }
 
-        // TODO: implement float checking with epsilon
         return true
       },
     },
@@ -125,12 +139,12 @@ export const getNumberValidator = (
 
   if (numberSchema.type === 'integer') {
     validator.pattern = {
-      value: /^([+-]?[1-9]\d*|0)$/,
+      value: integerPattern,
       message: ErrorTypes.pattern,
     }
   } else {
     validator.pattern = {
-      value: /^([0-9]+([,.][0-9]+))?$/,
+      value: numberPattern,
       message: ErrorTypes.pattern,
     }
   }

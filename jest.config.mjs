@@ -16,5 +16,11 @@ export default {
       },
     ],
   },
+  moduleNameMapper: {
+    '^react-hook-form-jsonschema$': '<rootDir>/src/index.ts',
+    '^react$': '<rootDir>/node_modules/react',
+    '^react-dom$': '<rootDir>/node_modules/react-dom',
+    '^react/jsx-runtime$': '<rootDir>/node_modules/react/jsx-runtime.js',
+  },
   modulePathIgnorePatterns: ['<rootDir>/src/components/__mocks__/'],
 }

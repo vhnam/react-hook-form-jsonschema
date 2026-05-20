@@ -1,7 +1,6 @@
 import { ObjectFields } from '../../shared/fields'
+import type { ExampleFormProps } from '../../shared/types'
 
-import { uiSchema } from './ui-schema'
-
-export function Form() {
+export function Form({ uiSchema }: ExampleFormProps) {
   return <ObjectFields pointer="#" UISchema={uiSchema} />
 }

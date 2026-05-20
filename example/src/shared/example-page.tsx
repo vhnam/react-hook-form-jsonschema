@@ -30,7 +30,7 @@ export function ExamplePage({ example }: { example: ExampleDefinition }) {
           description={example.summary}
           defaultValues={example.defaultValues}
         >
-          <example.Form />
+          <example.Form uiSchema={example.uiSchema} />
         </FormDemo>
       </section>
     </div>

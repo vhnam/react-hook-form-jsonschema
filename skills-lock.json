@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "skills": {
+    "javascript-testing-patterns": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "skillPath": "plugins/javascript-typescript/skills/javascript-testing-patterns/SKILL.md",
+      "computedHash": "8d0a8d7615ff343770af0218720691d56c55ae258793565936c8b3a97e188f51"
+    },
+    "typescript-advanced-types": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "skillPath": "plugins/javascript-typescript/skills/typescript-advanced-types/SKILL.md",
+      "computedHash": "3a3be8c925f96ac4e1280db28a01677e7ca5197f3792de2bbf35ab3bb324b6dd"
+    },
+    "validating-json-data": {
+      "source": "zaggino/z-schema",
+      "sourceType": "github",
+      "skillPath": "skills/validating-json-data/SKILL.md",
+      "computedHash": "2a4f570cc928c6bbe403ebf74a71d85eb3605e59f93da392c18364b7c7e7d92c"
+    },
+    "vercel-react-best-practices": {
+      "source": "vercel-labs/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/react-best-practices/SKILL.md",
+      "computedHash": "ca7b0c0c6e5f2750043f7f0cd72d16ac4e2abc48f9b5500d047a4b77a2506212"
+    },
+    "writing-json-schemas": {
+      "source": "zaggino/z-schema",
+      "sourceType": "github",
+      "skillPath": "skills/writing-json-schemas/SKILL.md",
+      "computedHash": "9b3b90c7d96bc9ef8c643dd464b2097d2a22f87ffc7f6c85a2973f5de2636409"
+    }
+  }
+}
