@@ -47,6 +47,38 @@ test('should raise error when writing value not in enum', async () => {
   )
 })
 
+test('should raise minLength error for an empty optional string', async () => {
+  const schema = {
+    type: 'object',
+    properties: {
+      displayName: {
+        type: 'string',
+        title: 'Display Name',
+        default: 'Demo user',
+        minLength: 1,
+      },
+    },
+  }
+
+  const { getByText, getByLabelText } = render(
+    <FormContext schema={schema} onSubmit={() => {}}>
+      <MockInput path="#/properties/displayName" />
+      <input type="submit" value="Submit" />
+    </FormContext>
+  )
+
+  fireEvent.change(getByLabelText('Display Name'), {
+    target: { value: '' },
+  })
+  getByText('Submit').click()
+
+  await waitFor(() =>
+    expect(
+      getByText(`This is an error: ${ErrorTypes.minLength}:1`)
+    ).toBeDefined()
+  )
+})
+
 describe('testing integer boundaries', () => {
   it('should raise error for maximum', async () => {
     const { getByText, getByLabelText } = render(
